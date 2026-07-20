@@ -42,7 +42,7 @@ public sealed class Plugin : BasePlugin
 {
     public const string PluginGuid = "sangriafalls.vrising.bossrespawnoverlay";
     public const string PluginName = "Boss Respawn Overlay";
-    public const string PluginVersion = "0.4.9";
+    public const string PluginVersion = "0.4.10";
 
     internal static readonly BossDefinition[] DefaultBosses =
     [
@@ -565,10 +565,15 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
         }
     }
 
+    private static bool ShouldSkipScheduledBoss(BossState boss)
+    {
+        return boss.HasResponse && !boss.IsAlive && !boss.HasError && boss.RemainingSeconds > 10f;
+    }
+
     private List<BossState> GetPinnedBossesForPolling()
     {
         return _bosses
-            .Where(boss => boss.IsPinned)
+            .Where(boss => boss.IsPinned && !ShouldSkipScheduledBoss(boss))
             .OrderBy(boss => boss.Index)
             .ToList();
     }
@@ -576,7 +581,7 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
     private BossState? SelectNextScheduledBoss(out bool isPreferred)
     {
         var pinnedBosses = GetPinnedBossesForPolling();
-        var hasNormalBoss = _bosses.Any(boss => !boss.IsPinned);
+        var hasNormalBoss = _bosses.Any(boss => !boss.IsPinned && !ShouldSkipScheduledBoss(boss));
 
         if (pinnedBosses.Count > 0 && (_preferredSinceNormal < 2 || !hasNormalBoss))
         {
@@ -587,7 +592,7 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
         for (var offset = 0; offset < _bosses.Count; offset++)
         {
             var index = (_nextBossIndex + offset) % _bosses.Count;
-            if (!_bosses[index].IsPinned)
+            if (!_bosses[index].IsPinned && !ShouldSkipScheduledBoss(_bosses[index]))
             {
                 isPreferred = false;
                 return _bosses[index];
@@ -604,9 +609,9 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
     {
         if (wasPreferred)
         {
-            var pinnedCount = _bosses.Count(item => item.IsPinned);
+            var pinnedCount = GetPinnedBossesForPolling().Count;
             _nextPinnedIndex = pinnedCount == 0 ? 0 : (_nextPinnedIndex + 1) % pinnedCount;
-            var hasNormalBoss = _bosses.Any(item => !item.IsPinned);
+            var hasNormalBoss = _bosses.Any(item => !item.IsPinned && !ShouldSkipScheduledBoss(item));
             // Havendo bosses normais, a próxima consulta deve alternar para a fila normal.
             if (hasNormalBoss)
             {
