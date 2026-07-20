@@ -42,7 +42,7 @@ public sealed class Plugin : BasePlugin
 {
     public const string PluginGuid = "sangriafalls.vrising.bossrespawnoverlay";
     public const string PluginName = "Boss Respawn Overlay";
-    public const string PluginVersion = "0.4.6";
+    public const string PluginVersion = "0.4.8";
 
     internal static readonly BossDefinition[] DefaultBosses =
     [
@@ -129,6 +129,7 @@ public sealed class Plugin : BasePlugin
     internal static ConfigEntry<string> Bosses { get; private set; } = null!;
     internal static ConfigEntry<string> PinnedBosses { get; private set; } = null!;
     internal static ConfigEntry<string> ExpandedActs { get; private set; } = null!;
+    internal static ConfigEntry<bool> PinnedOnly { get; private set; } = null!;
 
     public override void Load()
     {
@@ -146,6 +147,7 @@ public sealed class Plugin : BasePlugin
         PositionY = Config.Bind("UI", "PositionY", -1f, "Posição Y salva; -1 usa o topo.");
         FontSize = Config.Bind("UI", "FontSize", 16, "Tamanho da fonte do contador.");
         ExpandedActs = Config.Bind("UI", "ExpandedActs", string.Empty, "Atos abertos na overlay, por exemplo: 1,3.");
+        PinnedOnly = Config.Bind("UI", "PinnedOnly", false, "Quando ativo, esconde os atos e mostra somente os bosses fixados.");
         PinnedBosses = Config.Bind("Boss", "PinnedBosses", string.Empty, "Bosses preferenciais que aparecem no topo, separados por vírgula.");
 
         // Migra a lista curta usada pelo protótipo anterior para a lista completa.
@@ -276,6 +278,7 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
     private GUIStyle? _pinButtonStyle;
     private GUIStyle? _sectionStyle;
     private GUIStyle? _resizeStyle;
+    private GUIStyle? _filterStyle;
     private float _nextQueryAt;
     private float _requestSentAt = -1f;
     private int _activeBossIndex = -1;
@@ -862,12 +865,19 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
         }
 
         GUI.Box(panelRect, GUIContent.none, _boxStyle);
+        var filterRect = new Rect(panelRect.x + panelRect.width - 146f, panelRect.y + 6f, 92f, headerHeight - 8f);
+        if (GUI.Button(filterRect, Plugin.PinnedOnly.Value ? "Mostrar atos" : "So fixados", _filterStyle))
+        {
+            Plugin.PinnedOnly.Value = !Plugin.PinnedOnly.Value;
+            Plugin.Instance.Config.Save();
+            _scrollPosition = Vector2.zero;
+        }
         GUI.Label(
-            new Rect(panelRect.x + panelRect.width - 72f, panelRect.y + 6f, 60f, headerHeight - 8f),
+            new Rect(panelRect.x + panelRect.width - 48f, panelRect.y + 6f, 40f, headerHeight - 8f),
             _bosses.Count.ToString(),
             _labelStyle);
         GUI.Label(
-            new Rect(panelRect.x + 12f, panelRect.y + 6f, panelRect.width - 92f, headerHeight - 8f),
+            new Rect(panelRect.x + 12f, panelRect.y + 6f, panelRect.width - 168f, headerHeight - 8f),
             "<b>Bosses</b>  (arraste o cabeçalho)",
             _labelStyle);
 
@@ -891,13 +901,20 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
             contentHeight += sectionHeaderHeight + pinnedBosses.Count * rowHeight;
         }
 
-        for (var act = 1; act <= 4; act++)
+        if (!Plugin.PinnedOnly.Value)
         {
-            contentHeight += sectionHeaderHeight;
-            if (_expandedActs[act - 1])
+            for (var act = 1; act <= 4; act++)
             {
-                contentHeight += actBosses[act - 1].Count * rowHeight;
+                contentHeight += sectionHeaderHeight;
+                if (_expandedActs[act - 1])
+                {
+                    contentHeight += actBosses[act - 1].Count * rowHeight;
+                }
             }
+        }
+        else if (pinnedBosses.Count == 0)
+        {
+            contentHeight += rowHeight;
         }
 
         contentHeight = Mathf.Max(viewport.height, contentHeight);
@@ -929,25 +946,35 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
             }
         }
 
-        for (var act = 1; act <= 4; act++)
+        if (Plugin.PinnedOnly.Value)
         {
-            var actBossList = actBosses[act - 1];
-            var actHeader = $"{(_expandedActs[act - 1] ? "[-]" : "[+]" )} {GetActTitle(act)} ({actBossList.Count})";
-            if (GUI.Button(new Rect(4f, cursorY, rowWidth, sectionHeaderHeight - 2f), actHeader, _sectionStyle))
+            if (pinnedBosses.Count == 0)
             {
-                ToggleAct(act);
+                GUI.Label(new Rect(4f, cursorY, rowWidth, rowHeight), "Nenhum boss fixado. Use 'Fixar' para adicionar um.", _labelStyle);
             }
-
-            cursorY += sectionHeaderHeight;
-            if (!_expandedActs[act - 1])
+        }
+        else
+        {
+            for (var act = 1; act <= 4; act++)
             {
-                continue;
-            }
+                var actBossList = actBosses[act - 1];
+                var actHeader = $"{(_expandedActs[act - 1] ? "[-]" : "[+]" )} {GetActTitle(act)} ({actBossList.Count})";
+                if (GUI.Button(new Rect(4f, cursorY, rowWidth, sectionHeaderHeight - 2f), actHeader, _sectionStyle))
+                {
+                    ToggleAct(act);
+                }
 
-            foreach (var boss in actBossList)
-            {
-                DrawBossRow(boss, cursorY, rowWidth, rowHeight, killButtonWidth, pinButtonWidth);
-                cursorY += rowHeight;
+                cursorY += sectionHeaderHeight;
+                if (!_expandedActs[act - 1])
+                {
+                    continue;
+                }
+
+                foreach (var boss in actBossList)
+                {
+                    DrawBossRow(boss, cursorY, rowWidth, rowHeight, killButtonWidth, pinButtonWidth);
+                    cursorY += rowHeight;
+                }
             }
         }
         GUI.EndGroup();
@@ -1003,8 +1030,11 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
         // conversao o arraste fica inconsistente em escalas diferentes de 100%.
         var logicalMousePosition = currentEvent.mousePosition / UiScale;
 
+        // O lado direito do cabeçalho contém os controles "So fixados" e a
+        // quantidade de bosses; essa área precisa ficar livre para os botões.
+        var dragHeaderWidth = Mathf.Max(40f, panelRect.width - 146f);
         if (currentEvent.type == EventType.MouseDown &&
-            new Rect(panelRect.x, panelRect.y, panelRect.width, headerHeight).Contains(logicalMousePosition))
+            new Rect(panelRect.x, panelRect.y, dragHeaderWidth, headerHeight).Contains(logicalMousePosition))
         {
             _draggingPanel = true;
             _dragOffset = logicalMousePosition - _panelPosition;
@@ -1059,7 +1089,7 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
 
     private void EnsureStyles()
     {
-        if (_boxStyle != null && _labelStyle != null && _toggleStyle != null && _killButtonStyle != null && _pinButtonStyle != null && _sectionStyle != null && _resizeStyle != null)
+        if (_boxStyle != null && _labelStyle != null && _toggleStyle != null && _killButtonStyle != null && _pinButtonStyle != null && _sectionStyle != null && _resizeStyle != null && _filterStyle != null)
         {
             _labelStyle.fontSize = OverlayFontSize;
             _toggleStyle.fontSize = OverlayFontSize + 4;
@@ -1067,6 +1097,7 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
             _pinButtonStyle.fontSize = Mathf.Max(10, OverlayFontSize - 2);
             _sectionStyle.fontSize = OverlayFontSize;
             _resizeStyle.fontSize = Mathf.Max(9, OverlayFontSize - 5);
+            _filterStyle.fontSize = Mathf.Max(10, OverlayFontSize - 3);
             return;
         }
 
@@ -1120,6 +1151,14 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
             alignment = TextAnchor.MiddleCenter,
             fontSize = Mathf.Max(9, OverlayFontSize - 5),
             normal = { textColor = new Color(0.65f, 0.72f, 0.8f, 0.85f) },
+            hover = { textColor = Color.white },
+            active = { textColor = new Color(0.45f, 0.8f, 1f, 1f) }
+        };
+        _filterStyle = new GUIStyle
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontSize = Mathf.Max(10, OverlayFontSize - 3),
+            normal = { textColor = new Color(0.75f, 0.82f, 0.92f, 0.95f) },
             hover = { textColor = Color.white },
             active = { textColor = new Color(0.45f, 0.8f, 1f, 1f) }
         };

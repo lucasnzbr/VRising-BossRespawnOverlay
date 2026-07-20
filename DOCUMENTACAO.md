@@ -14,7 +14,7 @@ Depois de receber a resposta, o overlay mantem um cronometro local regressivo e 
 
 Estado atual:
 
-- versao: `0.4.6`;
+- versao: `0.4.8`;
 - BepInEx Unity IL2CPP para V Rising;
 - GUID: `sangriafalls.vrising.bossrespawnoverlay`;
 - dependencia obrigatoria: `SangrisInterface.dll`;
@@ -211,6 +211,7 @@ VRising/BepInEx/config/sangriafalls.vrising.bossrespawnoverlay.cfg
 | Boss | `Bosses` | Lista de comandos, separados por virgula, na ordem da fila normal. |
 | Boss | `PinnedBosses` | Comandos dos preferenciais persistentes. |
 | UI | `ExpandedActs` | Atos abertos, por exemplo `1,3`. |
+| UI | `PinnedOnly` | Quando ativo, esconde os atos e mostra apenas os bosses fixados. |
 | UI | `PanelWidth` | Largura do painel. |
 | UI | `PanelHeight` | Altura do painel e area de rolagem. |
 | UI | `UiScale` | Escala visual entre `0.60` e `1.75`; tambem pode ser alterada pelo botao discreto. |
@@ -288,4 +289,4 @@ O transporte atual envia o comando pelo evento interno de chat do cliente. As re
 
 ## 12. Estado do projeto
 
-Esta e a versao estavel `0.4.6` do Boss Respawn Overlay. O site, a DLL publica e esta documentacao devem permanecer alinhados com a mesma versao.
+Esta e a versao estavel `0.4.8` do Boss Respawn Overlay. O site, a DLL publica e esta documentacao devem permanecer alinhados com a mesma versao.
