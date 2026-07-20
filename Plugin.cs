@@ -42,7 +42,7 @@ public sealed class Plugin : BasePlugin
 {
     public const string PluginGuid = "sangriafalls.vrising.bossrespawnoverlay";
     public const string PluginName = "Boss Respawn Overlay";
-    public const string PluginVersion = "0.4.8";
+    public const string PluginVersion = "0.4.9";
 
     internal static readonly BossDefinition[] DefaultBosses =
     [
@@ -285,7 +285,8 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
     private int _nextBossIndex;
     private int _nextPinnedIndex;
     private int _forcedBossIndex = -1;
-    private bool _preferentialTurn = true;
+    private float _forcedQueryAt = -1f;
+    private int _preferredSinceNormal;
     private bool _loggedUnknownResponse;
     private bool _overlayShown;
     private readonly bool[] _expandedActs = new bool[4];
@@ -449,7 +450,8 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
             CompleteActiveRequest();
         }
 
-        if (ActiveBoss == null && Time.unscaledTime >= _nextQueryAt)
+        var nextQueryAt = _forcedQueryAt >= 0f ? _forcedQueryAt : _nextQueryAt;
+        if (ActiveBoss == null && Time.unscaledTime >= nextQueryAt)
         {
             TrySendBossQuery();
         }
@@ -462,10 +464,6 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
         _clientWorld = chatSystem.World;
 
         var activeBoss = ActiveBoss;
-        if (activeBoss == null)
-        {
-            return;
-        }
 
         NativeArray<Entity> entities = default;
         try
@@ -483,7 +481,8 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
 
                 var message = entityManager.GetComponentData<ChatMessageServerEvent>(entity);
                 var text = message.MessageText.Value;
-                if (!LooksLikeBossResponse(text, activeBoss))
+                ScheduleDefeatRefresh(text);
+                if (activeBoss == null || !LooksLikeBossResponse(text, activeBoss))
                 {
                     continue;
                 }
@@ -522,6 +521,31 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
         }
     }
 
+    private void ScheduleDefeatRefresh(string rawText)
+    {
+        var text = StripRichText(rawText);
+        if (!text.Contains("derrot", StringComparison.OrdinalIgnoreCase) &&
+            !text.Contains("defeat", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var defeatedBoss = _bosses
+            .OrderByDescending(boss => boss.DisplayName.Length)
+            .FirstOrDefault(boss =>
+                text.Contains(boss.DisplayName, StringComparison.OrdinalIgnoreCase) ||
+                text.Contains(boss.CommandName, StringComparison.OrdinalIgnoreCase));
+        if (defeatedBoss == null)
+        {
+            return;
+        }
+
+        _forcedBossIndex = defeatedBoss.Index;
+        _forcedQueryAt = Time.unscaledTime + 1f;
+        _nextQueryAt = _forcedQueryAt;
+        Plugin.Instance.Log.LogDebug($"Derrota detectada para {defeatedBoss.DisplayName}; consulta direta agendada para 1 segundo.");
+    }
+
     internal void NotifyManualChatCommand(string text)
     {
         if (string.IsNullOrWhiteSpace(text) ||
@@ -554,7 +578,7 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
         var pinnedBosses = GetPinnedBossesForPolling();
         var hasNormalBoss = _bosses.Any(boss => !boss.IsPinned);
 
-        if (pinnedBosses.Count > 0 && (_preferentialTurn || !hasNormalBoss))
+        if (pinnedBosses.Count > 0 && (_preferredSinceNormal < 2 || !hasNormalBoss))
         {
             isPreferred = true;
             return pinnedBosses[_nextPinnedIndex % pinnedBosses.Count];
@@ -582,14 +606,18 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
         {
             var pinnedCount = _bosses.Count(item => item.IsPinned);
             _nextPinnedIndex = pinnedCount == 0 ? 0 : (_nextPinnedIndex + 1) % pinnedCount;
+            var hasNormalBoss = _bosses.Any(item => !item.IsPinned);
             // Havendo bosses normais, a próxima consulta deve alternar para a fila normal.
-            _preferentialTurn = !_bosses.Any(item => !item.IsPinned);
+            if (hasNormalBoss)
+            {
+                _preferredSinceNormal = Mathf.Min(2, _preferredSinceNormal + 1);
+            }
             return;
         }
 
         _nextBossIndex = (boss.Index + 1) % _bosses.Count;
         // Depois de um boss normal, volta para os preferenciais quando existirem.
-        _preferentialTurn = _bosses.Any(item => item.IsPinned);
+        _preferredSinceNormal = 0;
     }
 
     private void TrySendBossQuery()
@@ -646,6 +674,7 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
 
             _activeBossIndex = boss.Index;
             _forcedBossIndex = -1;
+            _forcedQueryAt = -1f;
             if (!isForced)
             {
                 AdvanceScheduledBoss(boss, isPreferred);
@@ -665,7 +694,9 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
     {
         _activeBossIndex = -1;
         _loggedUnknownResponse = false;
-        _nextQueryAt = Time.unscaledTime + GapBetweenBossQueriesSeconds;
+        _nextQueryAt = _forcedQueryAt >= 0f
+            ? Mathf.Max(Time.unscaledTime, _forcedQueryAt)
+            : Time.unscaledTime + GapBetweenBossQueriesSeconds;
     }
 
     private void TogglePinned(BossState boss)

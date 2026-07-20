@@ -4,7 +4,7 @@ Addon client-side para o SangrisInterface do VRising/Sangria Falls.
 
 ## Versao final
 
-`0.4.8`
+`0.4.9`
 
 O painel mostra o tempo de renascimento dos bosses sem deixar as respostas automaticas no chat.
 

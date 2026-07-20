@@ -14,7 +14,7 @@ Depois de receber a resposta, o overlay mantem um cronometro local regressivo e 
 
 Estado atual:
 
-- versao: `0.4.8`;
+- versao: `0.4.9`;
 - BepInEx Unity IL2CPP para V Rising;
 - GUID: `sangriafalls.vrising.bossrespawnoverlay`;
 - dependencia obrigatoria: `SangrisInterface.dll`;
@@ -185,11 +185,13 @@ Sem preferenciais, a fila percorre os bosses normais na ordem configurada:
 Boss 1 -> Boss 2 -> Boss 3 -> ... -> ultimo boss -> Boss 1
 ```
 
-Com preferenciais, a fila alterna os dois grupos:
+Com preferenciais, a fila prioriza dois bosses fixados para cada boss normal:
 
 ```text
-Preferencial 1 -> Normal 1 -> Preferencial 2 -> Normal 2 -> Preferencial 3 -> Normal 3
+Preferencial 1 -> Preferencial 2 -> Normal 1 -> Preferencial 3 -> Preferencial 4 -> Normal 2
 ```
+
+Quando o chat recebe uma mensagem de derrota, o plugin identifica o boss pelo nome e agenda uma consulta direta dele aproximadamente 1 segundo depois. A mensagem original de derrota continua visivel; apenas a resposta da consulta automatica e consumida.
 
 O cronometro local diminui continuamente enquanto o boss esta morto. Uma nova resposta do servidor corrige o valor e define novamente o estado vivo/morto.
 
@@ -289,4 +291,4 @@ O transporte atual envia o comando pelo evento interno de chat do cliente. As re
 
 ## 12. Estado do projeto
 
-Esta e a versao estavel `0.4.8` do Boss Respawn Overlay. O site, a DLL publica e esta documentacao devem permanecer alinhados com a mesma versao.
+Esta e a versao estavel `0.4.9` do Boss Respawn Overlay. O site, a DLL publica e esta documentacao devem permanecer alinhados com a mesma versao.
