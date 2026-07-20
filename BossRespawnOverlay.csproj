@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <AssemblyName>BossRespawnOverlay</AssemblyName>
+    <Version>0.4.3</Version>
+    <AssemblyVersion>0.4.3.0</AssemblyVersion>
+    <FileVersion>0.4.3.0</FileVersion>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <DeployPlugin Condition="'$(DeployPlugin)' == ''">false</DeployPlugin>
+    <VRisingDir Condition="'$(VRisingDir)' == '' and Exists('$(MSBuildProjectDirectory)\..\..\core\BepInEx.Core.dll')">$(MSBuildProjectDirectory)\..\..\</VRisingDir>
+    <VRisingDir Condition="'$(VRisingDir)' == '' and Exists('C:\Program Files (x86)\Steam\steamapps\common\VRising\BepInEx\core\BepInEx.Core.dll')">C:\Program Files (x86)\Steam\steamapps\common\VRising</VRisingDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Compilações alternativas ficam dentro da pasta do projeto, mas não são fontes. -->
+    <Compile Remove="obj-test/**/*.cs" />
+    <None Remove="obj-test/**" />
+    <None Remove="build-test/**" />
+
+    <Reference Include="BepInEx.Core"><HintPath>$(VRisingDir)\BepInEx\core\BepInEx.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="BepInEx.Unity.IL2CPP"><HintPath>$(VRisingDir)\BepInEx\core\BepInEx.Unity.IL2CPP.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(VRisingDir)\BepInEx\core\0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppInterop.Runtime"><HintPath>$(VRisingDir)\BepInEx\core\Il2CppInterop.Runtime.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2Cppmscorlib"><HintPath>$(VRisingDir)\BepInEx\interop\Il2Cppmscorlib.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="ProjectM"><HintPath>$(VRisingDir)\BepInEx\interop\ProjectM.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="ProjectM.Shared"><HintPath>$(VRisingDir)\BepInEx\interop\ProjectM.Shared.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="ProjectM.HUD"><HintPath>$(VRisingDir)\BepInEx\interop\ProjectM.HUD.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.Collections"><HintPath>$(VRisingDir)\BepInEx\interop\Unity.Collections.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.Entities"><HintPath>$(VRisingDir)\BepInEx\interop\Unity.Entities.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(VRisingDir)\BepInEx\interop\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(VRisingDir)\BepInEx\interop\UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(VRisingDir)\BepInEx\interop\UnityEngine.TextRenderingModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="SangrisInterface"><HintPath>$(VRisingDir)\BepInEx\plugins\SangrisInterface.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <Target Name="CopyPluginToGame" AfterTargets="Build" Condition="'$(DeployPlugin)' == 'true'">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(VRisingDir)\BepInEx\plugins" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

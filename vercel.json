@@ -1,0 +1,12 @@
+{
+  "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/BossRespawnOverlay.dll",
+      "headers": [
+        { "key": "Content-Disposition", "value": "attachment; filename=BossRespawnOverlay.dll" },
+        { "key": "Cache-Control", "value": "public, max-age=300" }
+      ]
+    }
+  ]
+}

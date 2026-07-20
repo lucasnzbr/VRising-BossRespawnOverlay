@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Boss Respawn Overlay para V Rising e Sangria Falls: instalação, download e segurança.">
+  <title>Boss Respawn Overlay · Sangria Falls</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0d1118;
+      --panel: rgba(23, 30, 42, .84);
+      --panel-soft: rgba(32, 42, 58, .68);
+      --line: rgba(177, 198, 226, .16);
+      --text: #f1f5fb;
+      --muted: #aeb9c9;
+      --accent: #d8a86a;
+      --accent-strong: #f2c986;
+      --green: #69df93;
+      --red: #ff8585;
+      --shadow: 0 24px 70px rgba(0, 0, 0, .35);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--text);
+      background: radial-gradient(circle at 15% 0%, #293247 0, transparent 38%), var(--bg);
+      font: 16px/1.65 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    a { color: var(--accent-strong); }
+    .wrap { width: min(1080px, calc(100% - 36px)); margin: auto; }
+    header { padding: 22px 0 84px; }
+    nav { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .brand { color: var(--text); font-weight: 800; letter-spacing: .02em; text-decoration: none; }
+    nav a { color: var(--muted); font-size: .92rem; text-decoration: none; }
+    nav a:hover { color: var(--text); }
+    .nav-links { display: flex; gap: 20px; }
+    .hero { max-width: 760px; padding-top: 80px; }
+    .eyebrow { color: var(--accent-strong); font-size: .78rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+    h1, h2, h3 { line-height: 1.15; margin: 0 0 16px; }
+    h1 { font-size: clamp(2.4rem, 7vw, 5rem); letter-spacing: -.055em; }
+    h2 { font-size: clamp(1.7rem, 4vw, 2.35rem); }
+    h3 { font-size: 1.1rem; }
+    .hero p { color: var(--muted); font-size: 1.15rem; max-width: 650px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+    .button { border: 1px solid var(--line); border-radius: 12px; color: var(--text); display: inline-flex; align-items: center; gap: 8px; padding: 12px 17px; text-decoration: none; font-weight: 750; }
+    .button.primary { background: var(--accent); border-color: var(--accent); color: #17120d; }
+    .button:hover { transform: translateY(-1px); filter: brightness(1.08); }
+    .meta { color: var(--muted); font-size: .86rem; margin-top: 14px; }
+    main { padding-bottom: 70px; }
+    section { margin-top: 30px; padding: 34px; border: 1px solid var(--line); border-radius: 22px; background: var(--panel); box-shadow: var(--shadow); }
+    .section-intro { color: var(--muted); margin: -5px 0 25px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .card { padding: 22px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel-soft); }
+    .card p { color: var(--muted); margin: 0; }
+    .steps { counter-reset: steps; display: grid; gap: 14px; }
+    .step { counter-increment: steps; display: grid; grid-template-columns: 42px 1fr; gap: 15px; align-items: start; }
+    .step::before { content: counter(steps); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: rgba(216, 168, 106, .18); color: var(--accent-strong); font-weight: 800; }
+    .step p { color: var(--muted); margin: 0; }
+    code, pre { font: .9rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
+    code { border-radius: 6px; padding: 2px 6px; color: #f7d7a0; background: rgba(0, 0, 0, .28); }
+    pre { overflow: auto; margin: 10px 0 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; color: #dbe6f5; background: #0a0e14; }
+    .notice { border-left: 3px solid var(--accent); padding: 12px 16px; color: var(--muted); background: rgba(216, 168, 106, .08); }
+    .safe { color: var(--green); }
+    .danger { color: var(--red); }
+    .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .tutorial-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(260px, .75fr); gap: 24px; align-items: center; }
+    .tutorial-shot { margin: 0; }
+    .tutorial-shot img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 14px 34px rgba(0, 0, 0, .28); }
+    figcaption { color: var(--muted); font-size: .88rem; margin-top: 10px; }
+    .point { color: var(--accent-strong); font-weight: 800; }
+    ul { color: var(--muted); padding-left: 22px; }
+    footer { padding: 0 0 42px; color: var(--muted); font-size: .9rem; }
+    @media (max-width: 720px) {
+      header { padding-bottom: 45px; }
+      .hero { padding-top: 55px; }
+      .nav-links { display: none; }
+      section { padding: 24px 20px; border-radius: 16px; }
+      .grid, .checks, .tutorial-layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <nav>
+        <a class="brand" href="/">SANGRIA FALLS</a>
+        <div class="nav-links">
+          <a href="#instalacao">Instalação</a>
+          <a href="#seguranca">Segurança</a>
+          <a href="#suporte">Suporte</a>
+        </div>
+      </nav>
+      <div class="hero">
+        <div class="eyebrow">Addon comunitário · V Rising</div>
+        <h1>Boss Respawn Overlay</h1>
+        <p>Veja os tempos de renascimento dos bosses diretamente na tela, sem poluir o chat e com organização por atos e preferenciais.</p>
+        <div class="actions">
+          <a class="button primary" href="/BossRespawnOverlay.dll" download>↓ Baixar DLL v0.4.3</a>
+          <a class="button" href="#instalacao">Como instalar</a>
+        </div>
+        <div class="meta">Compatível com BepInEx IL2CPP · V Rising · SangrisInterface obrigatório</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section>
+      <h2>O que ele faz</h2>
+      <p class="section-intro">Um painel client-side para acompanhar respawns enquanto você joga.</p>
+      <div class="grid">
+        <div class="card"><h3>Contadores internos</h3><p>Consulta o servidor em intervalos controlados e mantém a contagem regressiva entre as consultas.</p></div>
+        <div class="card"><h3>Interface organizada</h3><p>Bosses separados por atos, com preferenciais persistentes e painel arrastável.</p></div>
+        <div class="card"><h3>Chat preservado</h3><p>As consultas automáticas são tratadas internamente; mensagens manuais não devem ser apagadas.</p></div>
+      </div>
+    </section>
+
+    <section id="instalacao">
+      <h2>Como instalar</h2>
+      <div class="steps">
+        <div class="step"><div><h3>Feche o jogo</h3><p>Instale ou atualize os arquivos com o V Rising fechado para evitar DLL bloqueada.</p></div></div>
+        <div class="step"><div><h3>Confirme o BepInEx</h3><p>O servidor precisa iniciar com BepInEx 6 IL2CPP funcionando. A pasta deve conter <code>VRising/BepInEx</code>.</p></div></div>
+        <div class="step"><div><h3>Instale as DLLs</h3><p>Baixe a DLL acima e coloque-a diretamente em:</p><pre>VRising\BepInEx\plugins\BossRespawnOverlay.dll</pre><p>O <strong>SangrisInterface.dll</strong> também deve estar em <code>BepInEx/plugins</code>.</p></div></div>
+        <div class="step"><div><h3>Abra o jogo</h3><p>Entre no servidor e aguarde a interface carregar. O painel inicia minimizado; clique no botão circular para abrir.</p></div></div>
+      </div>
+      <div class="notice" style="margin-top:24px"><strong>Dependência:</strong> este addon não substitui nem altera o SangrisInterface. Ele precisa da versão compatível do <code>SangrisInterface.dll</code> instalada.</div>
+    </section>
+
+    <section id="tutorial">
+      <h2>Como abrir e mover a overlay</h2>
+      <p class="section-intro">O painel começa minimizado para não atrapalhar a tela. O ponto destacado na imagem é o botão de abrir.</p>
+      <div class="tutorial-layout">
+        <figure class="tutorial-shot">
+          <img src="/assets/overlay-toggle.png" alt="Mapa do V Rising mostrando o ponto circular da Boss Respawn Overlay no canto superior direito">
+          <figcaption>O ponto circular destacado aparece no canto superior direito da tela.</figcaption>
+        </figure>
+        <div>
+          <h3>1. Abra o painel</h3>
+          <p>Clique no <span class="point">ponto circular</span> para expandir a Boss Respawn Overlay.</p>
+          <h3>2. Mova a interface</h3>
+          <p>Com o painel aberto, clique e arraste o cabeçalho “Eventos Sangria” para a posição desejada.</p>
+          <h3>3. Feche quando quiser</h3>
+          <p>Clique no cabeçalho novamente para minimizar. A posição fica salva entre sessões.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Primeiro uso</h2>
+      <ul>
+        <li>Arraste o cabeçalho para mover o painel; a posição fica salva.</li>
+        <li>Abra um ato para ver os bosses disponíveis.</li>
+        <li>Use <strong>Fixar</strong> para levar um boss aos preferenciais.</li>
+        <li>Use <strong>Morto</strong> depois de matar um boss para iniciar uma consulta imediata.</li>
+        <li>Verde significa vivo; vermelho indica que o boss está morto ou tem respawn em andamento.</li>
+      </ul>
+      <p class="meta">Configuração: <code>VRising\BepInEx\config\sangriafalls.vrising.bossrespawnoverlay.cfg</code></p>
+    </section>
+
+    <section id="seguranca">
+      <h2>Como verificar a DLL</h2>
+      <p class="section-intro">Mods são arquivos executáveis. Verifique o download antes de instalar, especialmente quando receber uma cópia de outra pessoa.</p>
+      <div class="checks">
+        <div class="card"><h3>1. Abra o VirusTotal</h3><p>Acesse <a href="https://www.virustotal.com/gui/home/upload" target="_blank" rel="noreferrer">virustotal.com/gui/home/upload</a> e envie <code>BossRespawnOverlay.dll</code>.</p></div>
+        <div class="card"><h3>2. Leia o resultado</h3><p>Compare o SHA-256 abaixo com a aba de detalhes. Um alerta isolado pode ser falso positivo, mas várias detecções exigem cautela.</p></div>
+      </div>
+      <pre>SHA-256 (v0.4.3): 1CD9C8750EEDDFA348E0E26408AA1BBBEA27F52E7A2DA171490C42B75125CE89</pre>
+      <p class="meta">O VirusTotal agrega vários mecanismos de segurança; o resultado não é uma garantia absoluta. Não envie arquivos pessoais ou configurações privadas.</p>
+    </section>
+
+    <section id="suporte">
+      <h2>Se não aparecer</h2>
+      <ul>
+        <li>Verifique se a DLL está em <code>BepInEx/plugins</code>, não apenas na pasta de downloads.</li>
+        <li>Confirme que <code>SangrisInterface.dll</code> também está instalado.</li>
+        <li>Reinicie o jogo depois de alterar DLLs.</li>
+        <li>Consulte <code>BepInEx/LogOutput.log</code> e procure por <code>Boss Respawn Overlay</code>.</li>
+        <li>Se o jogo atualizou, a API do V Rising pode ter mudado e o addon pode precisar de uma nova versão.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="wrap">Boss Respawn Overlay · Projeto comunitário para Sangria Falls.</footer>
+</body>
+</html>

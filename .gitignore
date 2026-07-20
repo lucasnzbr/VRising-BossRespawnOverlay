@@ -1,0 +1,12 @@
+bin/
+obj/
+build-test/
+obj-test/
+*.user
+*.suo
+*.dll
+*.rar
+*.zip
+releases/
+_backups/
+!BossRespawnOverlay.dll
