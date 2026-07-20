@@ -30,6 +30,12 @@ O arquivo de configuracao e criado em:
 BepInEx/config/sangriafalls.vrising.bossrespawnoverlay.cfg
 ```
 
+### Abrindo e movendo a overlay
+
+O painel começa minimizado. Clique no ponto circular destacado no canto superior direito para abrir a interface. Depois, arraste o cabeçalho para mover a overlay; clique nele novamente para minimizar.
+
+![Ponto para abrir e mover a overlay](assets/overlay-toggle.png)
+
 Detalhes tecnicos, comandos de build, lista de bosses e ideias futuras estao em [DOCUMENTACAO.md](DOCUMENTACAO.md).
 
 ## Desenvolvimento
