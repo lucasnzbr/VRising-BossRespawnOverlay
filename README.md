@@ -4,11 +4,12 @@ Addon client-side para o SangrisInterface do VRising/Sangria Falls.
 
 ## Versao final
 
-`0.4.3`
+`0.4.6`
 
 O painel mostra o tempo de renascimento dos bosses sem deixar as respostas automaticas no chat.
 
 - overlay inicia minimizada e pode ser arrastada;
+- botão discreto de escala alterna entre 60% e 175% para adaptar a interface à resolução;
 - bosses organizados por Ato 1 a 4;
 - preferenciais ficam no topo e persistem entre sessoes;
 - polling alternado: preferencial, fila normal, preferencial, fila normal;

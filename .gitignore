@@ -6,6 +6,7 @@ obj-test/
 *.suo
 *.dll
 *.rar
+!source.rar
 *.zip
 releases/
 _backups/

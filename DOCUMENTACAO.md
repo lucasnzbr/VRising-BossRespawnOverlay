@@ -14,7 +14,7 @@ Depois de receber a resposta, o overlay mantem um cronometro local regressivo e 
 
 Estado atual:
 
-- versao: `0.4.3`;
+- versao: `0.4.6`;
 - BepInEx Unity IL2CPP para V Rising;
 - GUID: `sangriafalls.vrising.bossrespawnoverlay`;
 - dependencia obrigatoria: `SangrisInterface.dll`;
@@ -50,6 +50,8 @@ O painel comeca minimizado. O ponto circular destacado no canto superior direito
 ![Ponto para abrir a overlay](assets/overlay-toggle.png)
 
 Clique no ponto para mostrar o painel.
+
+O pequeno botao de porcentagem logo abaixo do ponto alterna a escala visual entre `60%`, `75%`, `85%`, `100%`, `115%`, `125%`, `150%` e `175%`. Use uma escala menor em 1080p e uma maior em monitores 4K. A escolha fica salva em `UiScale`.
 
 ### 3.2 Mover a overlay
 
@@ -211,6 +213,7 @@ VRising/BepInEx/config/sangriafalls.vrising.bossrespawnoverlay.cfg
 | UI | `ExpandedActs` | Atos abertos, por exemplo `1,3`. |
 | UI | `PanelWidth` | Largura do painel. |
 | UI | `PanelHeight` | Altura do painel e area de rolagem. |
+| UI | `UiScale` | Escala visual entre `0.60` e `1.75`; tambem pode ser alterada pelo botao discreto. |
 | UI | `PositionX` / `PositionY` | Posicao salva do painel. |
 | UI | `FontSize` | Tamanho da fonte. |
 
@@ -285,4 +288,4 @@ O transporte atual envia o comando pelo evento interno de chat do cliente. As re
 
 ## 12. Estado do projeto
 
-Esta e a versao estavel `0.4.3` do Boss Respawn Overlay. O site, a DLL publica e esta documentacao devem permanecer alinhados com a mesma versao.
+Esta e a versao estavel `0.4.6` do Boss Respawn Overlay. O site, a DLL publica e esta documentacao devem permanecer alinhados com a mesma versao.

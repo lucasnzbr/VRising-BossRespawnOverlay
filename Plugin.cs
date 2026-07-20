@@ -42,7 +42,7 @@ public sealed class Plugin : BasePlugin
 {
     public const string PluginGuid = "sangriafalls.vrising.bossrespawnoverlay";
     public const string PluginName = "Boss Respawn Overlay";
-    public const string PluginVersion = "0.4.3";
+    public const string PluginVersion = "0.4.6";
 
     internal static readonly BossDefinition[] DefaultBosses =
     [
@@ -122,6 +122,7 @@ public sealed class Plugin : BasePlugin
     internal static ConfigEntry<float> TopOffset { get; private set; } = null!;
     internal static ConfigEntry<float> PanelWidth { get; private set; } = null!;
     internal static ConfigEntry<float> PanelHeight { get; private set; } = null!;
+    internal static ConfigEntry<float> UiScale { get; private set; } = null!;
     internal static ConfigEntry<float> PositionX { get; private set; } = null!;
     internal static ConfigEntry<float> PositionY { get; private set; } = null!;
     internal static ConfigEntry<int> FontSize { get; private set; } = null!;
@@ -140,6 +141,7 @@ public sealed class Plugin : BasePlugin
         TopOffset = Config.Bind("UI", "TopOffset", 28f, "Distância da borda superior em pixels.");
         PanelWidth = Config.Bind("UI", "PanelWidth", 420f, "Largura do painel em pixels.");
         PanelHeight = Config.Bind("UI", "PanelHeight", 650f, "Altura do painel em pixels; a lista rola quando necessário.");
+        UiScale = Config.Bind("UI", "UiScale", 1f, "Escala visual; o botão alterna entre 60%, 75%, 85%, 100%, 115%, 125%, 150% e 175%.");
         PositionX = Config.Bind("UI", "PositionX", -1f, "Posição X salva; -1 usa o canto superior direito.");
         PositionY = Config.Bind("UI", "PositionY", -1f, "Posição Y salva; -1 usa o topo.");
         FontSize = Config.Bind("UI", "FontSize", 16, "Tamanho da fonte do contador.");
@@ -273,6 +275,7 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
     private GUIStyle? _killButtonStyle;
     private GUIStyle? _pinButtonStyle;
     private GUIStyle? _sectionStyle;
+    private GUIStyle? _resizeStyle;
     private float _nextQueryAt;
     private float _requestSentAt = -1f;
     private int _activeBossIndex = -1;
@@ -291,6 +294,8 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
     private Vector2 _dragOffset;
 
     private int OverlayFontSize => Mathf.Clamp(Plugin.FontSize.Value, 12, 16);
+    private float UiScale => Mathf.Clamp(Plugin.UiScale.Value, 0.6f, 1.75f);
+    private static readonly float[] UiScalePresets = { 0.6f, 0.75f, 0.85f, 1f, 1.15f, 1.25f, 1.5f, 1.75f };
 
     private BossState? ActiveBoss => _activeBossIndex >= 0 && _activeBossIndex < _bosses.Count
         ? _bosses[_activeBossIndex]
@@ -423,9 +428,14 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
 
         foreach (var boss in _bosses)
         {
-            if (boss.HasResponse && !boss.IsAlive)
+            if (boss.HasResponse && !boss.IsAlive && !boss.HasError && boss.RemainingSeconds > 0f)
             {
                 boss.RemainingSeconds = Mathf.Max(0f, boss.RemainingSeconds - Time.unscaledDeltaTime);
+                if (boss.RemainingSeconds <= 0f)
+                {
+                    boss.RemainingSeconds = 0f;
+                    boss.IsAlive = true;
+                }
             }
         }
 
@@ -814,28 +824,40 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
         }
 
         EnsureStyles();
+        var scale = UiScale;
+        var logicalScreenWidth = Screen.width / scale;
+        var logicalScreenHeight = Screen.height / scale;
         var width = Mathf.Max(420f, Plugin.PanelWidth.Value);
-        var height = Mathf.Clamp(Plugin.PanelHeight.Value, 220f, Mathf.Max(220f, Screen.height - 12f));
+        var height = Mathf.Clamp(Plugin.PanelHeight.Value, 220f, Mathf.Max(220f, logicalScreenHeight - 12f));
         const float toggleSize = 34f;
         const float gap = 6f;
         const float headerHeight = 34f;
 
-        InitializePanelPosition(width, height, toggleSize, gap);
-        ClampPanelPosition(width, height, toggleSize, gap);
+        InitializePanelPosition(width, height, toggleSize, gap, logicalScreenWidth);
+        ClampPanelPosition(width, height, toggleSize, gap, logicalScreenWidth, logicalScreenHeight);
 
         var panelRect = new Rect(_panelPosition.x, _panelPosition.y, width, height);
         HandlePanelDragging(panelRect, headerHeight);
-        ClampPanelPosition(width, height, toggleSize, gap);
+        ClampPanelPosition(width, height, toggleSize, gap, logicalScreenWidth, logicalScreenHeight);
 
         var toggleRect = new Rect(panelRect.x + width + gap, panelRect.y, toggleSize, toggleSize);
+        var resizeRect = new Rect(toggleRect.x + 1f, toggleRect.y + toggleSize + 4f, toggleSize - 2f, 20f);
+        var previousMatrix = GUI.matrix;
+        GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(scale, scale, 1f));
 
         if (GUI.Button(toggleRect, _overlayShown ? "●" : "○", _toggleStyle))
         {
             _overlayShown = !_overlayShown;
         }
 
+        if (GUI.Button(resizeRect, $"{Mathf.RoundToInt(scale * 100f)}%", _resizeStyle))
+        {
+            CycleUiScale();
+        }
+
         if (!_overlayShown)
         {
+            GUI.matrix = previousMatrix;
             return;
         }
 
@@ -929,16 +951,17 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
             }
         }
         GUI.EndGroup();
+        GUI.matrix = previousMatrix;
     }
 
-    private void InitializePanelPosition(float width, float height, float toggleSize, float gap)
+    private void InitializePanelPosition(float width, float height, float toggleSize, float gap, float logicalScreenWidth)
     {
         if (_panelPositionInitialized)
         {
             return;
         }
 
-        var defaultX = Screen.width - width - toggleSize - gap - Plugin.RightOffset.Value;
+        var defaultX = logicalScreenWidth - width - toggleSize - gap - Plugin.RightOffset.Value;
         var defaultY = Plugin.TopOffset.Value;
         _panelPosition = new Vector2(
             Plugin.PositionX.Value >= 0f ? Plugin.PositionX.Value : defaultX,
@@ -946,12 +969,25 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
         _panelPositionInitialized = true;
     }
 
-    private void ClampPanelPosition(float width, float height, float toggleSize, float gap)
+    private void ClampPanelPosition(float width, float height, float toggleSize, float gap, float logicalScreenWidth, float logicalScreenHeight)
     {
-        var maxX = Mathf.Max(4f, Screen.width - width - toggleSize - gap - 4f);
-        var maxY = Mathf.Max(4f, Screen.height - 38f);
+        var maxX = Mathf.Max(4f, logicalScreenWidth - width - toggleSize - gap - 4f);
+        var maxY = Mathf.Max(4f, logicalScreenHeight - 38f);
         _panelPosition.x = Mathf.Clamp(_panelPosition.x, 4f, maxX);
         _panelPosition.y = Mathf.Clamp(_panelPosition.y, 4f, maxY);
+    }
+
+    private void CycleUiScale()
+    {
+        var current = UiScale;
+        var next = UiScalePresets.FirstOrDefault(value => value > current + 0.001f);
+        if (next <= 0f)
+        {
+            next = UiScalePresets[0];
+        }
+
+        Plugin.UiScale.Value = next;
+        Plugin.Instance.Config.Save();
     }
 
     private void HandlePanelDragging(Rect panelRect, float headerHeight)
@@ -962,18 +998,23 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
             return;
         }
 
+        // O painel e desenhado com GUI.matrix. O mouse continua chegando em
+        // pixels da tela, enquanto panelRect usa coordenadas logicas; sem a
+        // conversao o arraste fica inconsistente em escalas diferentes de 100%.
+        var logicalMousePosition = currentEvent.mousePosition / UiScale;
+
         if (currentEvent.type == EventType.MouseDown &&
-            new Rect(panelRect.x, panelRect.y, panelRect.width, headerHeight).Contains(currentEvent.mousePosition))
+            new Rect(panelRect.x, panelRect.y, panelRect.width, headerHeight).Contains(logicalMousePosition))
         {
             _draggingPanel = true;
-            _dragOffset = currentEvent.mousePosition - _panelPosition;
+            _dragOffset = logicalMousePosition - _panelPosition;
             currentEvent.Use();
             return;
         }
 
         if (currentEvent.type == EventType.MouseDrag && _draggingPanel)
         {
-            _panelPosition = currentEvent.mousePosition - _dragOffset;
+            _panelPosition = logicalMousePosition - _dragOffset;
             currentEvent.Use();
             return;
         }
@@ -1005,7 +1046,7 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
             return "NAO ENCONTRADO";
         }
 
-        if (boss.RemainingSeconds > 0.5f)
+        if (boss.RemainingSeconds > 0f)
         {
             var remaining = TimeSpan.FromSeconds(Math.Ceiling(boss.RemainingSeconds));
             return remaining.TotalDays >= 1
@@ -1018,13 +1059,14 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
 
     private void EnsureStyles()
     {
-        if (_boxStyle != null && _labelStyle != null && _toggleStyle != null && _killButtonStyle != null && _pinButtonStyle != null && _sectionStyle != null)
+        if (_boxStyle != null && _labelStyle != null && _toggleStyle != null && _killButtonStyle != null && _pinButtonStyle != null && _sectionStyle != null && _resizeStyle != null)
         {
             _labelStyle.fontSize = OverlayFontSize;
             _toggleStyle.fontSize = OverlayFontSize + 4;
             _killButtonStyle.fontSize = Mathf.Max(10, OverlayFontSize - 2);
             _pinButtonStyle.fontSize = Mathf.Max(10, OverlayFontSize - 2);
             _sectionStyle.fontSize = OverlayFontSize;
+            _resizeStyle.fontSize = Mathf.Max(9, OverlayFontSize - 5);
             return;
         }
 
@@ -1072,6 +1114,14 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
             normal = { textColor = new Color(0.95f, 0.85f, 0.45f, 1f) },
             hover = { textColor = Color.white },
             active = { textColor = new Color(1f, 0.95f, 0.55f, 1f) }
+        };
+        _resizeStyle = new GUIStyle
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontSize = Mathf.Max(9, OverlayFontSize - 5),
+            normal = { textColor = new Color(0.65f, 0.72f, 0.8f, 0.85f) },
+            hover = { textColor = Color.white },
+            active = { textColor = new Color(0.45f, 0.8f, 1f, 1f) }
         };
     }
 }

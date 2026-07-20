@@ -72,13 +72,16 @@
     figcaption { color: var(--muted); font-size: .88rem; margin-top: 10px; }
     .point { color: var(--accent-strong); font-weight: 800; }
     ul { color: var(--muted); padding-left: 22px; }
-    footer { padding: 0 0 42px; color: var(--muted); font-size: .9rem; }
+    footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 0 0 42px; color: var(--muted); font-size: .9rem; }
+    footer a { color: var(--accent-strong); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
     @media (max-width: 720px) {
       header { padding-bottom: 45px; }
       .hero { padding-top: 55px; }
       .nav-links { display: none; }
       section { padding: 24px 20px; border-radius: 16px; }
       .grid, .checks, .tutorial-layout { grid-template-columns: 1fr; }
+      footer { align-items: flex-start; flex-direction: column; }
     }
   </style>
 </head>
@@ -98,7 +101,7 @@
         <h1>Boss Respawn Overlay</h1>
         <p>Veja os tempos de renascimento dos bosses diretamente na tela, sem poluir o chat e com organização por atos e preferenciais.</p>
         <div class="actions">
-          <a class="button primary" href="/BossRespawnOverlay.dll" download>↓ Baixar DLL v0.4.3</a>
+          <a class="button primary" href="/BossRespawnOverlay.dll" download>↓ Baixar DLL v0.4.6</a>
           <a class="button" href="#instalacao">Como instalar</a>
         </div>
         <div class="meta">Compatível com BepInEx IL2CPP · V Rising · SangrisInterface obrigatório</div>
@@ -140,8 +143,10 @@
           <h3>1. Abra o painel</h3>
           <p>Clique no <span class="point">ponto circular</span> para expandir a Boss Respawn Overlay.</p>
           <h3>2. Mova a interface</h3>
-          <p>Com o painel aberto, clique e arraste o cabeçalho “Eventos Sangria” para a posição desejada.</p>
-          <h3>3. Feche quando quiser</h3>
+          <p>Com o painel aberto, clique e arraste o cabeçalho “Bosses” para a posição desejada.</p>
+          <h3>3. Ajuste o tamanho</h3>
+          <p>Use o pequeno botão de porcentagem abaixo do ponto para alternar entre 60% e 175%. A escala fica salva.</p>
+          <h3>4. Feche quando quiser</h3>
           <p>Clique no cabeçalho novamente para minimizar. A posição fica salva entre sessões.</p>
         </div>
       </div>
@@ -166,7 +171,7 @@
         <div class="card"><h3>1. Abra o VirusTotal</h3><p>Acesse <a href="https://www.virustotal.com/gui/home/upload" target="_blank" rel="noreferrer">virustotal.com/gui/home/upload</a> e envie <code>BossRespawnOverlay.dll</code>.</p></div>
         <div class="card"><h3>2. Leia o resultado</h3><p>Compare o SHA-256 abaixo com a aba de detalhes. Um alerta isolado pode ser falso positivo, mas várias detecções exigem cautela.</p></div>
       </div>
-      <pre>SHA-256 (v0.4.3): 1CD9C8750EEDDFA348E0E26408AA1BBBEA27F52E7A2DA171490C42B75125CE89</pre>
+      <pre>SHA-256 (v0.4.6): F7F202C2934EAB54E33D14B0AD87C95FA9D9982E5CA5CD581F8C185999125972</pre>
       <p class="meta">O VirusTotal agrega vários mecanismos de segurança; o resultado não é uma garantia absoluta. Não envie arquivos pessoais ou configurações privadas.</p>
     </section>
 
@@ -182,6 +187,9 @@
     </section>
   </main>
 
-  <footer class="wrap">Boss Respawn Overlay · Projeto comunitário para Sangria Falls.</footer>
+  <footer class="wrap">
+    <span>Boss Respawn Overlay · Projeto comunitário para Sangria Falls.</span>
+    <a href="/source.rar" download>↓ Baixar source (.rar)</a>
+  </footer>
 </body>
 </html>
