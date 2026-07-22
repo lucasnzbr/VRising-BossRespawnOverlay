@@ -11,3 +11,10 @@ obj-test/
 releases/
 _backups/
 !BossRespawnOverlay.dll
+!releases/
+releases/*
+!releases/*.dll
+!releases/*.rar
+!_backups/
+_backups/*
+!_backups/*.dll

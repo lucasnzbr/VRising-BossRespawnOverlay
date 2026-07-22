@@ -4,7 +4,7 @@ Addon client-side para o SangrisInterface do VRising/Sangria Falls.
 
 ## Versao final
 
-`0.4.10`
+`0.4.11`
 
 O painel mostra o tempo de renascimento dos bosses sem deixar as respostas automaticas no chat.
 
@@ -15,6 +15,8 @@ O painel mostra o tempo de renascimento dos bosses sem deixar as respostas autom
 - polling alternado: preferencial, fila normal, preferencial, fila normal;
 - botao `Morto` dispara uma consulta imediata;
 - texto verde indica vivo; vermelho indica morto.
+- cada boss mostra em amarelo quantas derrotas foram reconhecidas no chat durante a sessão;
+- o fim do Ato 4 tem um contador de sessão opcional; quando ativo, o total aparece no cabeçalho no lugar da quantidade total de bosses.
 
 ## Instalacao
 
@@ -52,8 +54,7 @@ Compile informando a pasta do jogo:
 dotnet build .\BossRespawnOverlay.csproj -c Release -p:VRisingDir="C:\Program Files (x86)\Steam\steamapps\common\VRising"
 ```
 
-Para copiar a DLL compilada diretamente para `BepInEx/plugins`, use `-p:DeployPlugin=true`.
-Por padrao, o build apenas gera a DLL em `bin/Release`.
+Por padrao, o build tambem atualiza `BepInEx/plugins` e salva uma copia versionada em `_backups/BossRespawnOverlay-0.4.11.dll`. Para gerar apenas a DLL em `bin/Release`, use `-p:DeployPlugin=false -p:BackupPlugin=false`.
 
 O projeto deve ficar fora de `BepInEx/plugins`; o BepInEx pode procurar DLLs também nas subpastas desse diretório.
 
@@ -65,4 +66,4 @@ O `index.html` na raiz é uma página estática pronta para a Vercel. Para publi
 2. Use `Other` como framework preset.
 3. Deixe o build command vazio e publique a raiz do projeto.
 
-O arquivo `BossRespawnOverlay.dll` na raiz é o download apresentado na página. Depois de uma nova build, atualize o arquivo e o SHA-256 exibido em `index.html`.
+O arquivo `BossRespawnOverlay.dll` na raiz é o download da versão atual. A pasta `releases/` mantém DLLs versionadas para rollback; o rodapé do site exibe o log-diff e os downloads anteriores. Depois de uma nova build, atualize a DLL e o SHA-256 exibido em `index.html`.

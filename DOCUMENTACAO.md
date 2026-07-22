@@ -14,7 +14,7 @@ Depois de receber a resposta, o overlay mantem um cronometro local regressivo e 
 
 Estado atual:
 
-- versao: `0.4.10`;
+- versao: `0.4.11`;
 - BepInEx Unity IL2CPP para V Rising;
 - GUID: `sangriafalls.vrising.bossrespawnoverlay`;
 - dependencia obrigatoria: `SangrisInterface.dll`;
@@ -71,7 +71,13 @@ Os preferenciais ficam salvos em `PinnedBosses` e continuam entre sessoes. A lis
 
 Clique em `Morto` depois de matar um boss. O overlay marca o boss como morto, zera o contador visual e coloca uma consulta prioritaria na fila. Essa consulta comeca aproximadamente 0,1 segundo depois do clique.
 
-### 3.6 Cores e estados
+### 3.6 Contador da sessao
+
+Ao expandir o Ato 4, depois do ultimo boss, aparece o item opcional `Contador da sessão`. Clique em `Ativar` para exibir no cabeçalho, no lugar da quantidade total de bosses, o total de bosses mortos na sessão. Quando desativado, esse campo do cabeçalho fica vazio. O contador nao e necessario para usar o overlay e fica desativado por padrao; a opcao fica salva em `SessionKillCounterEnabled`, mas os totais nao sao persistidos.
+
+Cada boss exibe em amarelo o total individual no formato `[x]Nome`. A contagem considera exclusivamente derrotas reconhecidas no chat, com uma pequena deduplicacao para evitar contar duas vezes o mesmo evento. O botao `Morto` apenas inicia uma consulta prioritaria e nao altera a contagem. Ela e zerada ao entrar em outro mundo/sessao ou ao recarregar o plugin.
+
+### 3.7 Cores e estados
 
 - verde: resposta recebida e boss vivo;
 - vermelho: resposta recebida e boss morto, com tempo de respawn ou resposta de boss nao encontrado;
@@ -216,6 +222,7 @@ VRising/BepInEx/config/sangriafalls.vrising.bossrespawnoverlay.cfg
 | Boss | `PinnedBosses` | Comandos dos preferenciais persistentes. |
 | UI | `ExpandedActs` | Atos abertos, por exemplo `1,3`. |
 | UI | `PinnedOnly` | Quando ativo, esconde os atos e mostra apenas os bosses fixados. |
+| UI | `SessionKillCounterEnabled` | Ativa o contador opcional de mortes da sessão no fim do Ato 4. |
 | UI | `PanelWidth` | Largura do painel. |
 | UI | `PanelHeight` | Altura do painel e area de rolagem. |
 | UI | `UiScale` | Escala visual entre `0.60` e `1.75`; tambem pode ser alterada pelo botao discreto. |
@@ -248,19 +255,21 @@ O projeto esta fora da pasta do jogo e usa `VRisingDir` para localizar as refere
 
 ```powershell
 dotnet build .\BossRespawnOverlay.csproj -c Release `
-  -p:VRisingDir="C:\Program Files (x86)\Steam\steamapps\common\VRising" `
-  -p:DeployPlugin=false
+  -p:VRisingDir="C:\Program Files (x86)\Steam\steamapps\common\VRising"
 ```
 
-O build gera a DLL em `bin/Release` e nao instala nada por padrao. Para copiar a DLL diretamente para `BepInEx/plugins`, use:
+O build gera a DLL em `bin/Release`, atualiza `BepInEx/plugins` e cria uma copia versionada em `_backups` por padrao. Para desativar a publicacao e o backup automaticos, use:
 
 ```powershell
 dotnet build .\BossRespawnOverlay.csproj -c Release `
   -p:VRisingDir="C:\Program Files (x86)\Steam\steamapps\common\VRising" `
-  -p:DeployPlugin=true
+  -p:DeployPlugin=false `
+  -p:BackupPlugin=false
 ```
 
-O site estatico da Vercel usa o `index.html` da raiz e disponibiliza `BossRespawnOverlay.dll` como download. Depois de uma nova build publica, substitua a DLL da raiz e atualize o SHA-256 exibido na pagina.
+O backup segue o formato `_backups/BossRespawnOverlay-<versao>.dll`. A cópia para `BepInEx/plugins` sobrescreve a DLL anterior da mesma instalação com a build atual.
+
+O site estatico da Vercel usa o `index.html` da raiz e disponibiliza `BossRespawnOverlay.dll` como download. DLLs anteriores ficam em `releases/` com nome versionado; o rodape mostra o log-diff, incluindo `Plugin.cs` e demais arquivos source alterados. Depois de uma nova build publica, substitua a DLL da raiz e atualize o SHA-256 exibido na pagina.
 
 ## 9. Verificacao de seguranca
 
@@ -275,12 +284,13 @@ Um alerta isolado pode ser falso positivo em mods, mas varias deteccoes devem se
 
 ## 10. Arquitetura atual
 
-O plugin possui quatro responsabilidades principais:
+O plugin possui cinco responsabilidades principais:
 
 1. `BossDefinition` mantem nome exibido, nivel e nome usado no comando.
 2. `BossRespawnOverlayBehaviour` controla estado, polling, respostas, cronometros e interface.
 3. `ClientChatPatch` conecta o comportamento ao mundo do cliente e ao sistema de chat.
-4. A configuracao do BepInEx persiste preferenciais, atos abertos, posicao e parametros visuais.
+4. A contagem de mortes da sessão e o item opcional do Ato 4 ficam em `BossRespawnOverlayBehaviour`.
+5. A configuracao do BepInEx persiste preferenciais, atos abertos, posicao e parametros visuais.
 
 O transporte atual envia o comando pelo evento interno de chat do cliente. As respostas sao identificadas pelo boss consultado e consumidas apenas quando correspondem a uma requisicao automatica ativa.
 
@@ -289,8 +299,8 @@ O transporte atual envia o comando pelo evento interno de chat do cliente. As re
 - O addon depende da API e dos tipos IL2CPP da versao instalada do V Rising.
 - Uma atualizacao do jogo ou do SangrisInterface pode exigir recompilacao.
 - O cronometro e uma estimativa local entre respostas do servidor; ele nao substitui uma nova consulta.
-- Preferenciais e atos abertos sao configuracoes locais e nao acompanham a DLL.
+- Preferenciais, atos abertos e a visibilidade do contador sao configuracoes locais e nao acompanham a DLL; os totais de mortes pertencem somente a sessao atual.
 
 ## 12. Estado do projeto
 
-Esta e a versao estavel `0.4.10` do Boss Respawn Overlay. O site, a DLL publica e esta documentacao devem permanecer alinhados com a mesma versao.
+Esta e a versao estavel `0.4.11` do Boss Respawn Overlay. A versao `0.4.10` permanece disponivel na pasta `releases/` para rollback. O site, a DLL publica e esta documentacao devem permanecer alinhados com a mesma versao.

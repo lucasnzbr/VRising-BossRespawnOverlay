@@ -7,6 +7,13 @@
         { "key": "Content-Disposition", "value": "attachment; filename=BossRespawnOverlay.dll" },
         { "key": "Cache-Control", "value": "public, max-age=300" }
       ]
+    },
+    {
+      "source": "/releases/(.*\\.dll)",
+      "headers": [
+        { "key": "Content-Disposition", "value": "attachment" },
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
     }
   ]
 }

@@ -42,7 +42,7 @@ public sealed class Plugin : BasePlugin
 {
     public const string PluginGuid = "sangriafalls.vrising.bossrespawnoverlay";
     public const string PluginName = "Boss Respawn Overlay";
-    public const string PluginVersion = "0.4.10";
+    public const string PluginVersion = "0.4.11";
 
     internal static readonly BossDefinition[] DefaultBosses =
     [
@@ -130,6 +130,7 @@ public sealed class Plugin : BasePlugin
     internal static ConfigEntry<string> PinnedBosses { get; private set; } = null!;
     internal static ConfigEntry<string> ExpandedActs { get; private set; } = null!;
     internal static ConfigEntry<bool> PinnedOnly { get; private set; } = null!;
+    internal static ConfigEntry<bool> SessionKillCounterEnabled { get; private set; } = null!;
 
     public override void Load()
     {
@@ -148,6 +149,7 @@ public sealed class Plugin : BasePlugin
         FontSize = Config.Bind("UI", "FontSize", 16, "Tamanho da fonte do contador.");
         ExpandedActs = Config.Bind("UI", "ExpandedActs", string.Empty, "Atos abertos na overlay, por exemplo: 1,3.");
         PinnedOnly = Config.Bind("UI", "PinnedOnly", false, "Quando ativo, esconde os atos e mostra somente os bosses fixados.");
+        SessionKillCounterEnabled = Config.Bind("UI", "SessionKillCounterEnabled", false, "Mostra o contador opcional de bosses mortos nesta sessão no final do Ato 4.");
         PinnedBosses = Config.Bind("Boss", "PinnedBosses", string.Empty, "Bosses preferenciais que aparecem no topo, separados por vírgula.");
 
         // Migra a lista curta usada pelo protótipo anterior para a lista completa.
@@ -227,6 +229,7 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
     // quando várias chegam em sequência muito rápida. Um boss por segundo
     // completa a lista de 30 dentro de um ciclo de aproximadamente 30 s.
     private const float GapBetweenBossQueriesSeconds = 1f;
+    private const float KillCountDedupSeconds = 2f;
 
     private static ComponentType[]? _networkEventComponents;
 
@@ -268,6 +271,7 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
         internal bool HasError { get; set; }
         internal bool IsPinned { get; set; }
         internal float RemainingSeconds { get; set; }
+        internal int SessionKillCount { get; set; }
     }
 
     private readonly List<BossState> _bosses = new();
@@ -287,6 +291,8 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
     private int _forcedBossIndex = -1;
     private float _forcedQueryAt = -1f;
     private int _preferredSinceNormal;
+    private int _sessionKillCount;
+    private readonly Dictionary<int, float> _lastCountedKillAtByBoss = new();
     private bool _loggedUnknownResponse;
     private bool _overlayShown;
     private readonly bool[] _expandedActs = new bool[4];
@@ -403,7 +409,7 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
     {
         var labelWidth = rowWidth - killButtonWidth - pinButtonWidth - 12f;
         var colour = !boss.HasResponse ? "#D0D0D0" : boss.IsAlive ? "#55FF77" : "#FF5555";
-        var label = $"<color={colour}><b>{boss.DisplayName} ({boss.Level})</b>: {GetBossStatusText(boss)}</color>";
+        var label = $"<color={colour}><b><color=#FFD84D>[{boss.SessionKillCount}]</color>{boss.DisplayName} ({boss.Level})</b>: {GetBossStatusText(boss)}</color>";
         GUI.Label(new Rect(4f, rowY, labelWidth, rowHeight), label, _labelStyle);
 
         if (GUI.Button(
@@ -420,6 +426,26 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
                 _pinButtonStyle))
         {
             TogglePinned(boss);
+        }
+    }
+
+    private void DrawSessionCounterRow(float rowY, float rowWidth, float rowHeight)
+    {
+        const float counterButtonWidth = 84f;
+        var isEnabled = Plugin.SessionKillCounterEnabled.Value;
+        var labelWidth = rowWidth - counterButtonWidth - 8f;
+        var label = isEnabled
+            ? "<color=#FFD84D><b>Contador da sessão ativo</b></color>"
+            : "<color=#FFD84D><b>Contador da sessão</b></color> <color=#D0D0D0>(opcional)</color>";
+        GUI.Label(new Rect(4f, rowY, labelWidth, rowHeight), label, _labelStyle);
+
+        if (GUI.Button(
+                new Rect(rowWidth - counterButtonWidth, rowY + 1f, counterButtonWidth, rowHeight - 2f),
+                isEnabled ? "Desativar" : "Ativar",
+                _pinButtonStyle))
+        {
+            Plugin.SessionKillCounterEnabled.Value = !isEnabled;
+            Plugin.Instance.Config.Save();
         }
     }
 
@@ -461,6 +487,11 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
     {
         // ClientChatPatch.LocalUser/LocalCharacter pertencem ao mundo do chat.
         // Uma Entity nunca pode ser consultada por outro EntityManager/world.
+        if (_clientWorld != null && !ReferenceEquals(_clientWorld, chatSystem.World))
+        {
+            ResetSessionKillCounters();
+        }
+
         _clientWorld = chatSystem.World;
 
         var activeBoss = ActiveBoss;
@@ -540,6 +571,7 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
             return;
         }
 
+        RegisterBossKill(defeatedBoss, "mensagem de derrota");
         _forcedBossIndex = defeatedBoss.Index;
         _forcedQueryAt = Time.unscaledTime + 1f;
         _nextQueryAt = _forcedQueryAt;
@@ -712,6 +744,31 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
             .OrderBy(item => item.Index)
             .Select(item => item.CommandName));
         Plugin.Instance.Config.Save();
+    }
+
+    private void ResetSessionKillCounters()
+    {
+        _sessionKillCount = 0;
+        _lastCountedKillAtByBoss.Clear();
+        foreach (var boss in _bosses)
+        {
+            boss.SessionKillCount = 0;
+        }
+    }
+
+    private void RegisterBossKill(BossState boss, string source)
+    {
+        var now = Time.unscaledTime;
+        if (_lastCountedKillAtByBoss.TryGetValue(boss.Index, out var lastCountedAt) &&
+            now - lastCountedAt < KillCountDedupSeconds)
+        {
+            return;
+        }
+
+        boss.SessionKillCount++;
+        _sessionKillCount++;
+        _lastCountedKillAtByBoss[boss.Index] = now;
+        Plugin.Instance.Log.LogDebug($"Boss morto contado na sessão ({source}): {boss.DisplayName}; total: {_sessionKillCount}.");
     }
 
     private void MarkBossKilled(BossState boss)
@@ -908,10 +965,13 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
             Plugin.Instance.Config.Save();
             _scrollPosition = Vector2.zero;
         }
-        GUI.Label(
-            new Rect(panelRect.x + panelRect.width - 48f, panelRect.y + 6f, 40f, headerHeight - 8f),
-            _bosses.Count.ToString(),
-            _labelStyle);
+        if (Plugin.SessionKillCounterEnabled.Value)
+        {
+            GUI.Label(
+                new Rect(panelRect.x + panelRect.width - 48f, panelRect.y + 6f, 40f, headerHeight - 8f),
+                $"<color=#FFD84D><b>{_sessionKillCount}</b></color>",
+                _labelStyle);
+        }
         GUI.Label(
             new Rect(panelRect.x + 12f, panelRect.y + 6f, panelRect.width - 168f, headerHeight - 8f),
             "<b>Bosses</b>  (arraste o cabeçalho)",
@@ -945,6 +1005,10 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
                 if (_expandedActs[act - 1])
                 {
                     contentHeight += actBosses[act - 1].Count * rowHeight;
+                    if (act == 4)
+                    {
+                        contentHeight += rowHeight;
+                    }
                 }
             }
         }
@@ -1009,6 +1073,12 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
                 foreach (var boss in actBossList)
                 {
                     DrawBossRow(boss, cursorY, rowWidth, rowHeight, killButtonWidth, pinButtonWidth);
+                    cursorY += rowHeight;
+                }
+
+                if (act == 4)
+                {
+                    DrawSessionCounterRow(cursorY, rowWidth, rowHeight);
                     cursorY += rowHeight;
                 }
             }

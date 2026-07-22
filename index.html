@@ -75,7 +75,19 @@
     figcaption { color: var(--muted); font-size: .88rem; margin-top: 10px; }
     .point { color: var(--accent-strong); font-weight: 800; }
     ul { color: var(--muted); padding-left: 22px; }
-    footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 0 0 42px; color: var(--muted); font-size: .9rem; }
+    footer { display: grid; gap: 20px; padding: 0 0 42px; color: var(--muted); font-size: .9rem; }
+    .footer-top { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+    .version-history { padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: rgba(23, 30, 42, .62); }
+    .version-history h2 { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 14px; font-size: 1.15rem; }
+    .version-history h2 span { color: var(--accent-strong); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; }
+    .release-entry + .release-entry { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .release-entry strong { color: var(--text); }
+    .release-entry p { margin: 5px 0 0; }
+    .release-entry details { margin-top: 8px; }
+    .release-entry summary { color: var(--accent-strong); cursor: pointer; }
+    .release-entry ul { margin: 8px 0 0; }
+    .release-entry li { margin: 3px 0; }
+    .release-entry .download { display: block; margin-top: 8px; }
     footer a { color: var(--accent-strong); text-decoration: none; }
     footer a:hover { text-decoration: underline; }
     @media (max-width: 720px) {
@@ -85,7 +97,7 @@
       .nav-links { display: none; }
       section { padding: 24px 20px; border-radius: 16px; }
       .grid, .checks, .tutorial-layout { grid-template-columns: 1fr; }
-      footer { align-items: flex-start; flex-direction: column; }
+      .footer-top { align-items: flex-start; flex-direction: column; }
     }
   </style>
 </head>
@@ -106,7 +118,7 @@
           <h1>Boss Respawn Overlay</h1>
           <p>Veja os tempos de renascimento dos bosses diretamente na tela, sem poluir o chat e com organização por atos e preferenciais.</p>
           <div class="actions">
-            <a class="button primary" href="/BossRespawnOverlay.dll" download>↓ Baixar DLL v0.4.10</a>
+            <a class="button primary" href="/BossRespawnOverlay.dll" download>↓ Baixar DLL v0.4.11</a>
             <a class="button" href="#instalacao">Como instalar</a>
           </div>
           <div class="meta">Compatível com BepInEx IL2CPP · V Rising · SangrisInterface obrigatório</div>
@@ -181,7 +193,7 @@
         <div class="card"><h3>1. Abra o VirusTotal</h3><p>Acesse <a href="https://www.virustotal.com/gui/home/upload" target="_blank" rel="noreferrer">virustotal.com/gui/home/upload</a> e envie <code>BossRespawnOverlay.dll</code>.</p></div>
         <div class="card"><h3>2. Leia o resultado</h3><p>Compare o SHA-256 abaixo com a aba de detalhes. Um alerta isolado pode ser falso positivo, mas várias detecções exigem cautela.</p></div>
       </div>
-      <pre>SHA-256 (v0.4.10): FF1F66078BFA45C656F7FDB5334CB512A8249C4D0A89DF4A10CD83DBA48843B1</pre>
+      <pre>SHA-256 (v0.4.11): 789E6FDC95D2EFFCA6BAF15C36CA815424B1D13AE8E1396E3D71BBEA1063E1D7</pre>
       <p class="meta">O VirusTotal agrega vários mecanismos de segurança; o resultado não é uma garantia absoluta. Não envie arquivos pessoais ou configurações privadas.</p>
     </section>
 
@@ -198,8 +210,35 @@
   </main>
 
   <footer class="wrap">
-    <span>Boss Respawn Overlay · Projeto comunitário para Sangria Falls.</span>
-    <a href="/source.rar" download>↓ Baixar source (.rar)</a>
+    <div class="version-history" id="versoes">
+      <h2>Histórico de versões <span>log-diff</span></h2>
+      <div class="release-entry">
+        <strong>v0.4.11 · atual</strong>
+        <p>Contador opcional da sessão no fim do Ato 4; quando ativo, o total ocupa o contador do cabeçalho.</p>
+        <details>
+          <summary>Ver diff da v0.4.10</summary>
+          <ul>
+            <li><code>Plugin.cs</code>: adiciona o toggle opcional, exibe o total da sessão no cabeçalho quando ativo e aplica deduplicação aos eventos de morte.</li>
+            <li><code>Plugin.cs</code>: exibe <code>[x]</code> em amarelo ao lado de cada boss e conta somente derrotas detectadas no chat; <code>Morto</code> continua sendo apenas uma consulta manual.</li>
+            <li><code>index.html</code>: adiciona este log-diff e links para downloads versionados.</li>
+            <li><code>README.md</code> e <code>DOCUMENTACAO.md</code>: documentam o contador, o reset por sessão e o histórico.</li>
+            <li><code>source.rar</code>: pacote atualizado com o source da 0.4.11.</li>
+          </ul>
+        </details>
+        <a class="download" href="/BossRespawnOverlay.dll" download>↓ Baixar v0.4.11</a>
+      </div>
+      <div class="release-entry">
+        <strong>v0.4.10</strong>
+        <p>Versão estável anterior, preservada para rollback.</p>
+        <p class="meta">SHA-256: FF1F66078BFA45C656F7FDB5334CB512A8249C4D0A89DF4A10CD83DBA48843B1</p>
+        <a class="download" href="/releases/BossRespawnOverlay-0.4.10.dll" download>↓ Baixar v0.4.10</a>
+        <a class="download" href="/releases/BossRespawnOverlay-source-0.4.10.rar" download>↓ Baixar source v0.4.10 (.rar)</a>
+      </div>
+    </div>
+    <div class="footer-top">
+      <span>Boss Respawn Overlay · Projeto comunitário para Sangria Falls.</span>
+      <a href="/source.rar" download>↓ Baixar source v0.4.11 (.rar)</a>
+    </div>
   </footer>
 </body>
 </html>
