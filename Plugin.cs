@@ -42,7 +42,7 @@ public sealed class Plugin : BasePlugin
 {
     public const string PluginGuid = "sangriafalls.vrising.bossrespawnoverlay";
     public const string PluginName = "Boss Respawn Overlay";
-    public const string PluginVersion = "0.4.11";
+    public const string PluginVersion = "0.4.12";
 
     internal static readonly BossDefinition[] DefaultBosses =
     [
@@ -259,6 +259,8 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
         {
             Index = index;
             Definition = definition;
+            NormalOrder = index;
+            PreferredOrder = index;
         }
 
         internal int Index { get; }
@@ -272,6 +274,8 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
         internal bool IsPinned { get; set; }
         internal float RemainingSeconds { get; set; }
         internal int SessionKillCount { get; set; }
+        internal int NormalOrder { get; set; }
+        internal int PreferredOrder { get; set; }
     }
 
     private readonly List<BossState> _bosses = new();
@@ -283,6 +287,7 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
     private GUIStyle? _sectionStyle;
     private GUIStyle? _resizeStyle;
     private GUIStyle? _filterStyle;
+    private GUIStyle? _lockStyle;
     private float _nextQueryAt;
     private float _requestSentAt = -1f;
     private int _activeBossIndex = -1;
@@ -302,6 +307,14 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
     private bool _panelPositionInitialized;
     private bool _draggingPanel;
     private Vector2 _dragOffset;
+    private bool _interfaceUnlocked;
+    private int _dragCandidateBossIndex = -1;
+    private int _dragCandidateGroup;
+    private bool _dragCandidatePreferred;
+    private Vector2 _dragStartPosition;
+    private bool _draggingBoss;
+    private int _dragTargetBossIndex = -1;
+    private bool _dragInsertAfterTarget;
 
     private int OverlayFontSize => Mathf.Clamp(Plugin.FontSize.Value, 12, 16);
     private float UiScale => Mathf.Clamp(Plugin.UiScale.Value, 0.6f, 1.75f);
@@ -362,13 +375,23 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
             _bosses.Add(new BossState(0, Plugin.DefaultBosses[20]));
         }
 
-        var pinned = new HashSet<string>(
-            Plugin.PinnedBosses.Value.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(name => name.Trim()),
-            StringComparer.OrdinalIgnoreCase);
-        foreach (var boss in _bosses)
+        var preferredOrder = 0;
+        foreach (var commandName in Plugin.PinnedBosses.Value.Split(',', StringSplitOptions.RemoveEmptyEntries))
         {
-            boss.IsPinned = pinned.Contains(boss.CommandName);
+            var boss = _bosses.FirstOrDefault(item =>
+                string.Equals(item.CommandName, commandName.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (boss == null || boss.IsPinned)
+            {
+                continue;
+            }
+
+            boss.IsPinned = true;
+            boss.PreferredOrder = preferredOrder++;
+        }
+
+        foreach (var boss in _bosses.Where(item => !item.IsPinned))
+        {
+            boss.PreferredOrder = preferredOrder + boss.NormalOrder;
         }
     }
 
@@ -394,7 +417,7 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
     {
         return _bosses
             .Where(boss => GetActNumber(boss) == act && !boss.IsPinned)
-            .OrderBy(boss => boss.Index)
+            .OrderBy(boss => boss.NormalOrder)
             .ToList();
     }
 
@@ -405,11 +428,21 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
         Plugin.Instance.Config.Save();
     }
 
-    private void DrawBossRow(BossState boss, float rowY, float rowWidth, float rowHeight, float killButtonWidth, float pinButtonWidth)
+    private void DrawBossRow(
+        BossState boss,
+        float rowY,
+        float rowWidth,
+        float rowHeight,
+        float killButtonWidth,
+        float pinButtonWidth,
+        bool isPreferredGroup,
+        int reorderGroup)
     {
         var labelWidth = rowWidth - killButtonWidth - pinButtonWidth - 12f;
         var colour = !boss.HasResponse ? "#D0D0D0" : boss.IsAlive ? "#55FF77" : "#FF5555";
         var label = $"<color={colour}><b><color=#FFD84D>[{boss.SessionKillCount}]</color>{boss.DisplayName} ({boss.Level})</b>: {GetBossStatusText(boss)}</color>";
+        HandleBossRowReordering(boss, rowY, labelWidth, rowHeight, isPreferredGroup, reorderGroup);
+        DrawBossDropIndicator(boss, rowY, rowWidth, rowHeight, isPreferredGroup, reorderGroup);
         GUI.Label(new Rect(4f, rowY, labelWidth, rowHeight), label, _labelStyle);
 
         if (GUI.Button(
@@ -427,6 +460,209 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
         {
             TogglePinned(boss);
         }
+    }
+
+    private void HandleBossRowReordering(
+        BossState boss,
+        float rowY,
+        float rowWidth,
+        float rowHeight,
+        bool isPreferredGroup,
+        int reorderGroup)
+    {
+        if (!_interfaceUnlocked)
+        {
+            return;
+        }
+
+        var currentEvent = Event.current;
+        if (currentEvent == null || currentEvent.button != 0)
+        {
+            return;
+        }
+
+        var rowRect = new Rect(4f, rowY, rowWidth, rowHeight);
+        var mousePosition = currentEvent.mousePosition;
+        var isSameGroup = _dragCandidatePreferred == isPreferredGroup && _dragCandidateGroup == reorderGroup;
+
+        if (_draggingBoss)
+        {
+            if (isSameGroup && rowRect.Contains(mousePosition))
+            {
+                _dragTargetBossIndex = boss.Index;
+                _dragInsertAfterTarget = mousePosition.y >= rowY + rowHeight / 2f;
+            }
+
+            return;
+        }
+
+        if (currentEvent.type == EventType.MouseDown &&
+            rowRect.Contains(mousePosition) &&
+            _dragCandidateBossIndex < 0)
+        {
+            _dragCandidateBossIndex = boss.Index;
+            _dragCandidatePreferred = isPreferredGroup;
+            _dragCandidateGroup = reorderGroup;
+            _dragStartPosition = mousePosition;
+            return;
+        }
+
+        if (_dragCandidateBossIndex != boss.Index || !isSameGroup)
+        {
+            return;
+        }
+
+        if (currentEvent.type == EventType.MouseDrag &&
+            (mousePosition - _dragStartPosition).sqrMagnitude >= 16f)
+        {
+            _draggingBoss = true;
+            _dragTargetBossIndex = boss.Index;
+            _dragInsertAfterTarget = mousePosition.y >= rowY + rowHeight / 2f;
+            currentEvent.Use();
+        }
+    }
+
+    private void DrawBossDropIndicator(
+        BossState boss,
+        float rowY,
+        float rowWidth,
+        float rowHeight,
+        bool isPreferredGroup,
+        int reorderGroup)
+    {
+        if (!_draggingBoss ||
+            _dragTargetBossIndex != boss.Index ||
+            _dragCandidateBossIndex == boss.Index ||
+            _dragCandidatePreferred != isPreferredGroup ||
+            _dragCandidateGroup != reorderGroup)
+        {
+            return;
+        }
+
+        var indicatorY = _dragInsertAfterTarget ? rowY + rowHeight - 3f : rowY;
+        var previousColor = GUI.color;
+        GUI.color = new Color(1f, 0.82f, 0.2f, 1f);
+        GUI.DrawTexture(new Rect(2f, indicatorY, rowWidth, 3f), Texture2D.whiteTexture);
+        GUI.color = previousColor;
+    }
+
+    private void CompleteBossRowReordering()
+    {
+        var currentEvent = Event.current;
+        if (currentEvent == null || currentEvent.type != EventType.MouseUp || currentEvent.button != 0)
+        {
+            if (currentEvent != null && currentEvent.type == EventType.MouseDrag && _draggingBoss)
+            {
+                currentEvent.Use();
+            }
+
+            return;
+        }
+
+        if (_draggingBoss && _dragTargetBossIndex >= 0 && _dragTargetBossIndex != _dragCandidateBossIndex)
+        {
+            ReorderBosses(
+                _dragCandidateBossIndex,
+                _dragTargetBossIndex,
+                _dragCandidatePreferred,
+                _dragCandidateGroup,
+                _dragInsertAfterTarget);
+            currentEvent.Use();
+        }
+
+        _dragCandidateBossIndex = -1;
+        _dragTargetBossIndex = -1;
+        _draggingBoss = false;
+        _dragInsertAfterTarget = false;
+    }
+
+    private void ReorderBosses(
+        int sourceIndex,
+        int targetIndex,
+        bool isPreferredGroup,
+        int reorderGroup,
+        bool insertAfterTarget)
+    {
+        var source = _bosses.FirstOrDefault(boss => boss.Index == sourceIndex);
+        var target = _bosses.FirstOrDefault(boss => boss.Index == targetIndex);
+        if (source == null || target == null || source == target)
+        {
+            return;
+        }
+
+        if (isPreferredGroup)
+        {
+            var preferred = _bosses
+                .Where(boss => boss.IsPinned)
+                .OrderBy(boss => boss.PreferredOrder)
+                .ToList();
+            MoveBoss(preferred, source, target, insertAfterTarget);
+            for (var i = 0; i < preferred.Count; i++)
+            {
+                preferred[i].PreferredOrder = i;
+            }
+
+            Plugin.PinnedBosses.Value = string.Join(',', preferred.Select(boss => boss.CommandName));
+        }
+        else
+        {
+            if (GetActNumber(source) != reorderGroup || GetActNumber(target) != reorderGroup ||
+                source.IsPinned || target.IsPinned)
+            {
+                return;
+            }
+
+            var actBosses = _bosses
+                .Where(boss => !boss.IsPinned && GetActNumber(boss) == reorderGroup)
+                .OrderBy(boss => boss.NormalOrder)
+                .ToList();
+            MoveBoss(actBosses, source, target, insertAfterTarget);
+
+            var normalBosses = _bosses
+                .Where(boss => !boss.IsPinned)
+                .OrderBy(boss => boss.NormalOrder)
+                .ToList();
+            for (var i = 0; i < normalBosses.Count; i++)
+            {
+                normalBosses[i].NormalOrder = i;
+            }
+
+            var preferredBosses = _bosses
+                .Where(boss => boss.IsPinned)
+                .OrderBy(boss => boss.NormalOrder)
+                .ToList();
+            for (var i = 0; i < preferredBosses.Count; i++)
+            {
+                preferredBosses[i].NormalOrder = normalBosses.Count + i;
+            }
+
+            Plugin.Bosses.Value = string.Join(',', _bosses
+                .OrderBy(boss => boss.NormalOrder)
+                .ThenBy(boss => boss.Index)
+                .Select(boss => boss.CommandName));
+        }
+
+        Plugin.Instance.Config.Save();
+    }
+
+    private static void MoveBoss(List<BossState> bosses, BossState source, BossState target, bool insertAfterTarget)
+    {
+        var sourcePosition = bosses.IndexOf(source);
+        var targetPosition = bosses.IndexOf(target);
+        if (sourcePosition < 0 || targetPosition < 0)
+        {
+            return;
+        }
+
+        bosses.RemoveAt(sourcePosition);
+        if (sourcePosition < targetPosition)
+        {
+            targetPosition--;
+        }
+
+        var insertPosition = insertAfterTarget ? targetPosition + 1 : targetPosition;
+        insertPosition = Mathf.Clamp(insertPosition, 0, bosses.Count);
+        bosses.Insert(insertPosition, source);
     }
 
     private void DrawSessionCounterRow(float rowY, float rowWidth, float rowHeight)
@@ -606,14 +842,23 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
     {
         return _bosses
             .Where(boss => boss.IsPinned && !ShouldSkipScheduledBoss(boss))
-            .OrderBy(boss => boss.Index)
+            .OrderBy(boss => boss.PreferredOrder)
+            .ToList();
+    }
+
+    private List<BossState> GetNormalBossesForPolling()
+    {
+        return _bosses
+            .Where(boss => !boss.IsPinned && !ShouldSkipScheduledBoss(boss))
+            .OrderBy(boss => boss.NormalOrder)
             .ToList();
     }
 
     private BossState? SelectNextScheduledBoss(out bool isPreferred)
     {
         var pinnedBosses = GetPinnedBossesForPolling();
-        var hasNormalBoss = _bosses.Any(boss => !boss.IsPinned && !ShouldSkipScheduledBoss(boss));
+        var normalBosses = GetNormalBossesForPolling();
+        var hasNormalBoss = normalBosses.Count > 0;
 
         if (pinnedBosses.Count > 0 && (_preferredSinceNormal < 2 || !hasNormalBoss))
         {
@@ -621,14 +866,10 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
             return pinnedBosses[_nextPinnedIndex % pinnedBosses.Count];
         }
 
-        for (var offset = 0; offset < _bosses.Count; offset++)
+        if (normalBosses.Count > 0)
         {
-            var index = (_nextBossIndex + offset) % _bosses.Count;
-            if (!_bosses[index].IsPinned && !ShouldSkipScheduledBoss(_bosses[index]))
-            {
-                isPreferred = false;
-                return _bosses[index];
-            }
+            isPreferred = false;
+            return normalBosses[_nextBossIndex % normalBosses.Count];
         }
 
         isPreferred = true;
@@ -652,7 +893,14 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
             return;
         }
 
-        _nextBossIndex = (boss.Index + 1) % _bosses.Count;
+        var normalBosses = _bosses
+            .Where(item => !item.IsPinned)
+            .OrderBy(item => item.NormalOrder)
+            .ToList();
+        var currentPosition = normalBosses.FindIndex(item => item == boss);
+        _nextBossIndex = normalBosses.Count == 0 || currentPosition < 0
+            ? 0
+            : (currentPosition + 1) % normalBosses.Count;
         // Depois de um boss normal, volta para os preferenciais quando existirem.
         _preferredSinceNormal = 0;
     }
@@ -739,9 +987,18 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
     private void TogglePinned(BossState boss)
     {
         boss.IsPinned = !boss.IsPinned;
+        if (boss.IsPinned)
+        {
+            boss.PreferredOrder = _bosses
+                .Where(item => item.IsPinned && item != boss)
+                .Select(item => item.PreferredOrder)
+                .DefaultIfEmpty(-1)
+                .Max() + 1;
+        }
+
         Plugin.PinnedBosses.Value = string.Join(',', _bosses
             .Where(item => item.IsPinned)
-            .OrderBy(item => item.Index)
+            .OrderBy(item => item.PreferredOrder)
             .Select(item => item.CommandName));
         Plugin.Instance.Config.Save();
     }
@@ -936,10 +1193,16 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
         HandlePanelDragging(panelRect, headerHeight);
         ClampPanelPosition(width, height, toggleSize, gap, logicalScreenWidth, logicalScreenHeight);
 
-        var toggleRect = new Rect(panelRect.x + width + gap, panelRect.y, toggleSize, toggleSize);
+        var lockRect = new Rect(panelRect.x + width + gap, panelRect.y, toggleSize, toggleSize);
+        var toggleRect = new Rect(lockRect.x + toggleSize + gap, panelRect.y, toggleSize, toggleSize);
         var resizeRect = new Rect(toggleRect.x + 1f, toggleRect.y + toggleSize + 4f, toggleSize - 2f, 20f);
         var previousMatrix = GUI.matrix;
         GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(scale, scale, 1f));
+
+        if (GUI.Button(lockRect, _interfaceUnlocked ? "○" : "●", _lockStyle))
+        {
+            ToggleInterfaceEditMode();
+        }
 
         if (GUI.Button(toggleRect, _overlayShown ? "●" : "○", _toggleStyle))
         {
@@ -986,7 +1249,7 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
         const float sectionHeaderHeight = 30f;
         var pinnedBosses = _bosses
             .Where(boss => boss.IsPinned)
-            .OrderBy(boss => boss.Index)
+            .OrderBy(boss => boss.PreferredOrder)
             .ToList();
         var actBosses = Enumerable.Range(1, 4)
             .Select(GetActBosses)
@@ -1041,7 +1304,7 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
             cursorY += sectionHeaderHeight;
             foreach (var boss in pinnedBosses)
             {
-                DrawBossRow(boss, cursorY, rowWidth, rowHeight, killButtonWidth, pinButtonWidth);
+                DrawBossRow(boss, cursorY, rowWidth, rowHeight, killButtonWidth, pinButtonWidth, true, 0);
                 cursorY += rowHeight;
             }
         }
@@ -1072,7 +1335,7 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
 
                 foreach (var boss in actBossList)
                 {
-                    DrawBossRow(boss, cursorY, rowWidth, rowHeight, killButtonWidth, pinButtonWidth);
+                    DrawBossRow(boss, cursorY, rowWidth, rowHeight, killButtonWidth, pinButtonWidth, false, act);
                     cursorY += rowHeight;
                 }
 
@@ -1084,6 +1347,7 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
             }
         }
         GUI.EndGroup();
+        CompleteBossRowReordering();
         GUI.matrix = previousMatrix;
     }
 
@@ -1094,7 +1358,8 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
             return;
         }
 
-        var defaultX = logicalScreenWidth - width - toggleSize - gap - Plugin.RightOffset.Value;
+        var sideControlWidth = toggleSize * 2f + gap * 2f;
+        var defaultX = logicalScreenWidth - width - sideControlWidth - Plugin.RightOffset.Value;
         var defaultY = Plugin.TopOffset.Value;
         _panelPosition = new Vector2(
             Plugin.PositionX.Value >= 0f ? Plugin.PositionX.Value : defaultX,
@@ -1104,7 +1369,8 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
 
     private void ClampPanelPosition(float width, float height, float toggleSize, float gap, float logicalScreenWidth, float logicalScreenHeight)
     {
-        var maxX = Mathf.Max(4f, logicalScreenWidth - width - toggleSize - gap - 4f);
+        var sideControlWidth = toggleSize * 2f + gap * 2f;
+        var maxX = Mathf.Max(4f, logicalScreenWidth - width - sideControlWidth - 4f);
         var maxY = Mathf.Max(4f, logicalScreenHeight - 38f);
         _panelPosition.x = Mathf.Clamp(_panelPosition.x, 4f, maxX);
         _panelPosition.y = Mathf.Clamp(_panelPosition.y, 4f, maxY);
@@ -1123,8 +1389,28 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
         Plugin.Instance.Config.Save();
     }
 
+    private void ToggleInterfaceEditMode()
+    {
+        _interfaceUnlocked = !_interfaceUnlocked;
+        if (_interfaceUnlocked)
+        {
+            return;
+        }
+
+        _draggingPanel = false;
+        _dragCandidateBossIndex = -1;
+        _dragTargetBossIndex = -1;
+        _draggingBoss = false;
+        _dragInsertAfterTarget = false;
+    }
+
     private void HandlePanelDragging(Rect panelRect, float headerHeight)
     {
+        if (!_interfaceUnlocked)
+        {
+            return;
+        }
+
         var currentEvent = Event.current;
         if (currentEvent == null || currentEvent.button != 0)
         {
@@ -1195,10 +1481,11 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
 
     private void EnsureStyles()
     {
-        if (_boxStyle != null && _labelStyle != null && _toggleStyle != null && _killButtonStyle != null && _pinButtonStyle != null && _sectionStyle != null && _resizeStyle != null && _filterStyle != null)
+        if (_boxStyle != null && _labelStyle != null && _toggleStyle != null && _killButtonStyle != null && _pinButtonStyle != null && _sectionStyle != null && _resizeStyle != null && _filterStyle != null && _lockStyle != null)
         {
             _labelStyle.fontSize = OverlayFontSize;
             _toggleStyle.fontSize = OverlayFontSize + 4;
+            _lockStyle.fontSize = OverlayFontSize + 1;
             _killButtonStyle.fontSize = Mathf.Max(10, OverlayFontSize - 2);
             _pinButtonStyle.fontSize = Mathf.Max(10, OverlayFontSize - 2);
             _sectionStyle.fontSize = OverlayFontSize;
@@ -1227,6 +1514,14 @@ internal sealed class BossRespawnOverlayBehaviour : MonoBehaviour
             normal = { textColor = new Color(0.35f, 0.85f, 1f, 0.95f) },
             hover = { textColor = Color.white },
             active = { textColor = new Color(0.2f, 0.65f, 0.85f, 1f) }
+        };
+        _lockStyle = new GUIStyle
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontSize = OverlayFontSize + 1,
+            normal = { textColor = new Color(1f, 0.25f, 0.25f, 1f) },
+            hover = { textColor = new Color(1f, 0.65f, 0.65f, 1f) },
+            active = { textColor = new Color(0.85f, 0.1f, 0.1f, 1f) }
         };
         _killButtonStyle = new GUIStyle
         {

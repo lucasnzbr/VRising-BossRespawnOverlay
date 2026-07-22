@@ -14,7 +14,7 @@ Depois de receber a resposta, o overlay mantem um cronometro local regressivo e 
 
 Estado atual:
 
-- versao: `0.4.11`;
+- versao: `0.4.12`;
 - BepInEx Unity IL2CPP para V Rising;
 - GUID: `sangriafalls.vrising.bossrespawnoverlay`;
 - dependencia obrigatoria: `SangrisInterface.dll`;
@@ -77,7 +77,11 @@ Ao expandir o Ato 4, depois do ultimo boss, aparece o item opcional `Contador da
 
 Cada boss exibe em amarelo o total individual no formato `[x]Nome`. A contagem considera exclusivamente derrotas reconhecidas no chat, com uma pequena deduplicacao para evitar contar duas vezes o mesmo evento. O botao `Morto` apenas inicia uma consulta prioritaria e nao altera a contagem. Ela e zerada ao entrar em outro mundo/sessao ou ao recarregar o plugin.
 
-### 3.7 Cores e estados
+### 3.7 Modo de edição
+
+O botão vermelho à esquerda do abrir/fechar alterna o modo de edição. Desbloqueado, ele permite arrastar o cabeçalho e reordenar bosses dentro de seus atos ou dentro de `Preferenciais`; as ordens ficam salvas em `Bosses` e `PinnedBosses`. Travado, o movimento e a reordenação ficam bloqueados e o comportamento de click-through existente permanece inalterado.
+
+### 3.8 Cores e estados
 
 - verde: resposta recebida e boss vivo;
 - vermelho: resposta recebida e boss morto, com tempo de respawn ou resposta de boss nao encontrado;
@@ -269,7 +273,7 @@ dotnet build .\BossRespawnOverlay.csproj -c Release `
 
 O backup segue o formato `_backups/BossRespawnOverlay-<versao>.dll`. A cópia para `BepInEx/plugins` sobrescreve a DLL anterior da mesma instalação com a build atual.
 
-O site estatico da Vercel usa o `index.html` da raiz e disponibiliza `BossRespawnOverlay.dll` como download. DLLs anteriores ficam em `releases/` com nome versionado; o rodape mostra o log-diff, incluindo `Plugin.cs` e demais arquivos source alterados. Depois de uma nova build publica, substitua a DLL da raiz e atualize o SHA-256 exibido na pagina.
+O site estatico da Vercel usa o `index.html` da raiz e disponibiliza `BossRespawnOverlay.dll` como download. DLLs e sources anteriores ficam em `releases/` com nome versionado; o rodape mostra o log-diff, incluindo `Plugin.cs` e demais arquivos source alterados. Depois de uma nova build publica, substitua a DLL da raiz e atualize o SHA-256 exibido na pagina.
 
 ## 9. Verificacao de seguranca
 
@@ -303,4 +307,4 @@ O transporte atual envia o comando pelo evento interno de chat do cliente. As re
 
 ## 12. Estado do projeto
 
-Esta e a versao estavel `0.4.11` do Boss Respawn Overlay. A versao `0.4.10` permanece disponivel na pasta `releases/` para rollback. O site, a DLL publica e esta documentacao devem permanecer alinhados com a mesma versao.
+Esta e a versao estavel `0.4.12` do Boss Respawn Overlay. As versoes `0.4.10` e `0.4.11` permanecem disponiveis na pasta `releases/` para rollback. O site, a DLL publica e esta documentacao devem permanecer alinhados com a mesma versao.

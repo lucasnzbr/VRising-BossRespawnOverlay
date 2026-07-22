@@ -4,7 +4,7 @@ Addon client-side para o SangrisInterface do VRising/Sangria Falls.
 
 ## Versao final
 
-`0.4.11`
+`0.4.12`
 
 O painel mostra o tempo de renascimento dos bosses sem deixar as respostas automaticas no chat.
 
@@ -17,6 +17,7 @@ O painel mostra o tempo de renascimento dos bosses sem deixar as respostas autom
 - texto verde indica vivo; vermelho indica morto.
 - cada boss mostra em amarelo quantas derrotas foram reconhecidas no chat durante a sessão;
 - o fim do Ato 4 tem um contador de sessão opcional; quando ativo, o total aparece no cabeçalho no lugar da quantidade total de bosses.
+- botão vermelho de edição libera o arraste do painel e a reordenação dos bosses/preferenciais; ao travar novamente, o comportamento normal da interface é preservado.
 
 ## Instalacao
 
@@ -54,7 +55,7 @@ Compile informando a pasta do jogo:
 dotnet build .\BossRespawnOverlay.csproj -c Release -p:VRisingDir="C:\Program Files (x86)\Steam\steamapps\common\VRising"
 ```
 
-Por padrao, o build tambem atualiza `BepInEx/plugins` e salva uma copia versionada em `_backups/BossRespawnOverlay-0.4.11.dll`. Para gerar apenas a DLL em `bin/Release`, use `-p:DeployPlugin=false -p:BackupPlugin=false`.
+Por padrao, o build tambem atualiza `BepInEx/plugins` e salva uma copia versionada em `_backups/BossRespawnOverlay-0.4.12.dll`. Para gerar apenas a DLL em `bin/Release`, use `-p:DeployPlugin=false -p:BackupPlugin=false`.
 
 O projeto deve ficar fora de `BepInEx/plugins`; o BepInEx pode procurar DLLs também nas subpastas desse diretório.
 

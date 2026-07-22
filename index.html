@@ -118,7 +118,7 @@
           <h1>Boss Respawn Overlay</h1>
           <p>Veja os tempos de renascimento dos bosses diretamente na tela, sem poluir o chat e com organização por atos e preferenciais.</p>
           <div class="actions">
-            <a class="button primary" href="/BossRespawnOverlay.dll" download>↓ Baixar DLL v0.4.11</a>
+            <a class="button primary" href="/BossRespawnOverlay.dll" download>↓ Baixar DLL v0.4.12</a>
             <a class="button" href="#instalacao">Como instalar</a>
           </div>
           <div class="meta">Compatível com BepInEx IL2CPP · V Rising · SangrisInterface obrigatório</div>
@@ -193,7 +193,7 @@
         <div class="card"><h3>1. Abra o VirusTotal</h3><p>Acesse <a href="https://www.virustotal.com/gui/home/upload" target="_blank" rel="noreferrer">virustotal.com/gui/home/upload</a> e envie <code>BossRespawnOverlay.dll</code>.</p></div>
         <div class="card"><h3>2. Leia o resultado</h3><p>Compare o SHA-256 abaixo com a aba de detalhes. Um alerta isolado pode ser falso positivo, mas várias detecções exigem cautela.</p></div>
       </div>
-      <pre>SHA-256 (v0.4.11): 789E6FDC95D2EFFCA6BAF15C36CA815424B1D13AE8E1396E3D71BBEA1063E1D7</pre>
+      <pre>SHA-256 (v0.4.12): 67773A5CBA3AEDF33A334D95ED19878624DF95AE355AEF9D0E43B8DFE6D28704</pre>
       <p class="meta">O VirusTotal agrega vários mecanismos de segurança; o resultado não é uma garantia absoluta. Não envie arquivos pessoais ou configurações privadas.</p>
     </section>
 
@@ -213,19 +213,34 @@
     <div class="version-history" id="versoes">
       <h2>Histórico de versões <span>log-diff</span></h2>
       <div class="release-entry">
-        <strong>v0.4.11 · atual</strong>
+        <strong>v0.4.12 · atual</strong>
+        <p>Modo de edição opcional com botão vermelho para arrastar o painel e reordenar bosses e preferenciais.</p>
+        <details>
+          <summary>Ver diff da v0.4.11</summary>
+          <ul>
+            <li><code>Plugin.cs</code>: adiciona o botão vermelho de edição, arraste do painel e reordenação persistente dos bosses.</li>
+            <li><code>Plugin.cs</code>: permite personalizar a ordem de <code>Preferenciais</code> sem alterar o click-through existente.</li>
+            <li><code>BossRespawnOverlay.csproj</code>: atualiza a versão para <code>0.4.12</code> mantendo backup e deploy automáticos.</li>
+            <li><code>index.html</code>, <code>README.md</code> e <code>DOCUMENTACAO.md</code>: registram o novo modo de edição.</li>
+          </ul>
+        </details>
+        <a class="download" href="/BossRespawnOverlay.dll" download>↓ Baixar v0.4.12</a>
+      </div>
+      <div class="release-entry">
+        <strong>v0.4.11</strong>
         <p>Contador opcional da sessão no fim do Ato 4; quando ativo, o total ocupa o contador do cabeçalho.</p>
+        <p class="meta">SHA-256: 789E6FDC95D2EFFCA6BAF15C36CA815424B1D13AE8E1396E3D71BBEA1063E1D7</p>
+        <a class="download" href="/releases/BossRespawnOverlay-0.4.11.dll" download>↓ Baixar v0.4.11</a>
+        <a class="download" href="/releases/BossRespawnOverlay-source-0.4.11.rar" download>↓ Baixar source v0.4.11 (.rar)</a>
         <details>
           <summary>Ver diff da v0.4.10</summary>
           <ul>
-            <li><code>Plugin.cs</code>: adiciona o toggle opcional, exibe o total da sessão no cabeçalho quando ativo e aplica deduplicação aos eventos de morte.</li>
+            <li><code>Plugin.cs</code>: adiciona o contador opcional, exibe o total da sessão no cabeçalho quando ativo e aplica deduplicação aos eventos de morte.</li>
             <li><code>Plugin.cs</code>: exibe <code>[x]</code> em amarelo ao lado de cada boss e conta somente derrotas detectadas no chat; <code>Morto</code> continua sendo apenas uma consulta manual.</li>
-            <li><code>index.html</code>: adiciona este log-diff e links para downloads versionados.</li>
-            <li><code>README.md</code> e <code>DOCUMENTACAO.md</code>: documentam o contador, o reset por sessão e o histórico.</li>
-            <li><code>source.rar</code>: pacote atualizado com o source da 0.4.11.</li>
+            <li><code>index.html</code>: adiciona o log-diff e links para downloads versionados.</li>
+            <li><code>README.md</code>, <code>DOCUMENTACAO.md</code> e <code>source.rar</code>: documentam e distribuem o source da 0.4.11.</li>
           </ul>
         </details>
-        <a class="download" href="/BossRespawnOverlay.dll" download>↓ Baixar v0.4.11</a>
       </div>
       <div class="release-entry">
         <strong>v0.4.10</strong>
@@ -237,7 +252,7 @@
     </div>
     <div class="footer-top">
       <span>Boss Respawn Overlay · Projeto comunitário para Sangria Falls.</span>
-      <a href="/source.rar" download>↓ Baixar source v0.4.11 (.rar)</a>
+      <a href="/source.rar" download>↓ Baixar source v0.4.12 (.rar)</a>
     </div>
   </footer>
 </body>
